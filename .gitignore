@@ -1,0 +1,15 @@
+# Binarios de Java
+*.class
+*.jar
+!gson-2.13.2.jar
+
+# Carpetas de compilación
+bin/
+out/
+target/
+
+# Configuración de editores
+.vscode/
+.idea/
+*.swp
+.DS_Store
