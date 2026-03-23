@@ -4,10 +4,10 @@
 | Asignatura    | Sistemas Distribuidos             |
 | ------------  | :------------------------------   |
 | Curso         | 2025-2026                         |
-| Equipo:       | equipo 22                         |
+| Equipo:       | equipo 2.2                        |
 |               |                                   |
 | Integrante 1: | Alvarez Vicente, Noelia           |
-| Integrante 2: | garcia del Barrio, juan Guillermo |
+| Integrante 2: | Garcia del Barrio, Juan Guillermo |
 | Integrante 3: | Hernández Sanchez, Jorge          |
 | Integrante 4: | García Anta, Asier                |
 
