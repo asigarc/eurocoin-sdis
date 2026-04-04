@@ -1,4 +1,4 @@
-package server;
+package eurocoin.server;
 
 import eurocoin.common.APPBancoPrimitive;
 import java.io.*;
