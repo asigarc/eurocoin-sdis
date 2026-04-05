@@ -5,7 +5,6 @@
 | ------------  | :------------------------------   |
 | Curso         | 2025-2026                         |
 | Equipo:       | equipo 2.2                        |
-|               |                                   |
 | Integrante 1: | Alvarez Vicente, Noelia           |
 | Integrante 2: | Garcia del Barrio, Juan Guillermo |
 | Integrante 3: | Hernández Sanchez, Jorge          |
@@ -14,9 +13,12 @@
 
 
 ### Descripción de carpetas con documentación y código:
-* nombre-carpeta: descripción contenido...
-* nombre-carpeta: descripción contenido...
-, etc....
+* src/eurocoin/common:
+* src/eurocoin/client:
+* src/eurocoin/server:
+* src/snippets:
+* src/utiles/digest:
+* src/utiles/registro: 
 
 
 NOTA: Los miembros del equipo manifiestan ser los auténticos autores de la 
