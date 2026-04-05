@@ -1,18 +1,22 @@
 package eurocoin.server;
 
 import eurocoin.common.APPBancoPrimitive;
+import eurocoin.common.BancoInterface;
 import java.io.*;
 import java.net.Socket;
 import utiles.digest.Digest;
 import utiles.registro.Registro;
 
-public class Sirviente extends Thread {
+public class Sirviente extends Thread implements BancoInterface {
 
     private Socket socketCliente;
     private ObjectOutputStream salida;
     private ObjectInputStream entrada;
     private Registro registroBanco;
     private Digest digest;
+
+    // Guardamos el desafío del banco a nivel de clase para poder usarlo en los métodos de la interfaz
+    private String desafioBanco;
 
     public Sirviente(Socket socketCliente) {
         this.socketCliente = socketCliente;
@@ -21,126 +25,132 @@ public class Sirviente extends Thread {
     @Override
     public void run() {
         try {
-            // 1. CONFIGURACIÓN INICIAL
-            // Abrimos los canales de comunicación. Siempre primero el de salida para evitar bloqueos.
+            // 1. Preparar conexiones
             salida = new ObjectOutputStream(socketCliente.getOutputStream());
             salida.flush();
             entrada = new ObjectInputStream(socketCliente.getInputStream());
-            
-            // Cargamos el registro del banco (suponiendo que lo hemos adaptado para leer el JSON anidado)
-            registroBanco = new Registro("RegistroBanco.json");
-            String hashFunc = registroBanco.getValor("FuncionHash"); 
-            digest = new Digest(hashFunc);
 
-            // ---------------------------------------------------------
-            // FASE 1: EL BANCO DESAFÍA AL CLIENTE
-            // ---------------------------------------------------------
+            // 2. Cargar utilidades (usamos la nueva clase RegistroBanco)
+            registroBanco = new Registro("RegistroBanco.json");
+            digest = new Digest("SHA-256"); // Usamos el mismo algoritmo que la APP
+
+            // ---- INICIO DEL PROTOCOLO ----
             
-            // Generamos un desafío aleatorio para evitar que un atacante repita mensajes antiguos
-            String desafioBanco = Long.toHexString(System.currentTimeMillis());
+            // A1: Banco -> APP saludo(desafio_banco)
+            desafioBanco = Long.toHexString(System.currentTimeMillis());
             System.out.println("[Sirviente] Enviando A1 y desafioBanco: " + desafioBanco);
-            
-            // Enviamos la primitiva A1 seguida del texto del desafío
             salida.writeObject(APPBancoPrimitive.A1);
             salida.writeObject(desafioBanco);
             salida.flush();
 
-            // ---------------------------------------------------------
-            // FASE 2: EL CLIENTE RESPONDE AL DESAFÍO
-            // ---------------------------------------------------------
-            
-            // Nos quedamos esperando a que el cliente nos envíe un A2 con sus datos
+            // A2: APP -> Banco saludo(desafio_app, id_cliente, hash)
             APPBancoPrimitive prim = (APPBancoPrimitive) entrada.readObject();
             
             if (prim == APPBancoPrimitive.A2) {
-                // Leemos los 3 datos que el cliente nos envía en orden
                 String desafioApp = (String) entrada.readObject();
                 String idCliente = (String) entrada.readObject();
                 String hashCliente = (String) entrada.readObject();
                 
-                System.out.println("[Sirviente] Recibido A2 de " + idCliente);
+                System.out.println("[Sirviente] Recibido A2 del cliente: " + idCliente);
 
-                // ---------------------------------------------------------
-                // FASE 3: VERIFICACIÓN DEL CLIENTE Y RESPUESTA DEL BANCO
-                // ---------------------------------------------------------
-                
-                // Buscamos el secreto de este cliente específico en el registro del Banco
-                // (Nota: aquí asumimos que podemos acceder al secreto del cliente con su ID)
-                String secretoApp = registroBanco.getValor(idCliente + "_secwallet"); 
-                
-                // Calculamos el hash nosotros mismos usando el desafío que enviamos antes y el secreto
-                String hashCalculado = digest.generateHash(desafioBanco + secretoApp);
+                // --- ¡MAGIA DE LA INTERFAZ! ---
+                // Delegamos la verificación al método obligatorio de BancoInterface
+                saludo(idCliente, desafioApp, hashCliente);
 
-                // Comparamos si el hash que calculamos es igual al que nos envió el cliente
-                if (!hashCalculado.equals(hashCliente)) {
-                    // Si no coinciden, es un atacante o la clave está mal. Enviamos A3 (Error) y cortamos.
-                    System.out.println("[Sirviente] Error de autenticación. Enviando A3.");
-                    salida.writeObject(APPBancoPrimitive.A3);
-                    salida.flush();
-                    return; // Terminamos la ejecución del hilo
-                }
-
-                // Si coinciden, el cliente es legítimo. Ahora el Banco tiene que demostrar su identidad.
-                // Buscamos el secreto del banco para este cliente
-                String secretoBanco = registroBanco.getValor(idCliente + "_SecBanco");
-                
-                // Calculamos el hash usando el desafío que nos mandó la APP y el secreto del banco
-                String hashParaApp = digest.generateHash(desafioApp + secretoBanco);
-
-                // Enviamos A4 (Todo OK) junto con nuestro hash para que la APP nos verifique
-                System.out.println("[Sirviente] Cliente verificado. Enviando A4 y hash del Banco.");
-                salida.writeObject(APPBancoPrimitive.A4);
-                salida.writeObject(hashParaApp);
-                salida.flush();
-
-                // ---------------------------------------------------------
-                // FASE 4: EL CLIENTE VERIFICA AL BANCO
-                // ---------------------------------------------------------
-                
-                // Esperamos el veredicto del cliente (A5 si le gustamos, A6 si no se fía)
+                // Esperamos la respuesta de la APP a nuestra autenticación (A5 o A6)
                 APPBancoPrimitive respuestaApp = (APPBancoPrimitive) entrada.readObject();
                 
-                if (respuestaApp == APPBancoPrimitive.A6) {
-                    System.out.println("[Sirviente] El cliente rechazó nuestra autenticación (A6).");
-                    return; // Cortamos la conexión
-                } else if (respuestaApp == APPBancoPrimitive.A5) {
-                    System.out.println("[Sirviente] ¡Autenticación mutua completada con éxito (A5)!");
+                if (respuestaApp == APPBancoPrimitive.A5) {
+                    System.out.println("[Sirviente] ¡Autenticación mutua OK (A5)!");
                     
-                    // ---------------------------------------------------------
-                    // FASE 5: OPERACIÓN Y DESPEDIDA
-                    // ---------------------------------------------------------
-                    
-                    // En esta primera entrega solo simulamos la operación esperando a que el cliente se despida
-                    System.out.println("[Sirviente] Esperando operaciones del cliente...");
-                    
-                    // Esperamos la primitiva A7 (Final)
+                    // Esperamos a que la APP quiera desconectarse (A7)
                     APPBancoPrimitive operacion = (APPBancoPrimitive) entrada.readObject();
-                    
                     if (operacion == APPBancoPrimitive.A7) {
-                        System.out.println("[Sirviente] Recibido A7 (Final). Enviando A8 (Final OK).");
-                        
-                        // Respondemos educadamente con A8 para cerrar el protocolo
-                        salida.writeObject(APPBancoPrimitive.A8);
-                        salida.flush();
+                        m_final(); // Llamamos al método de la interfaz para cerrar
                     }
+                } else if (respuestaApp == APPBancoPrimitive.A6) {
+                    System.out.println("[Sirviente] La APP rechazó nuestra autenticación (A6).");
                 }
             } else {
-                System.out.println("[Sirviente] Se esperaba A2, pero se recibió: " + prim);
+                System.out.println("[Sirviente] Se esperaba A2, llegó: " + prim);
             }
 
         } catch (Exception e) {
-            System.err.println("[Sirviente] Error en la comunicación con el cliente: " + e.getMessage());
+            System.err.println("[Sirviente] Fin de conexión o error: " + e.getMessage());
         } finally {
-            // FASE 6: LIMPIEZA
-            // Pase lo que pase (éxito o fallo), siempre hay que cerrar los recursos para no dejar puertos colgados.
+            // Limpieza de recursos
             try {
                 if (salida != null) salida.close();
                 if (entrada != null) entrada.close();
                 if (socketCliente != null) socketCliente.close();
-                System.out.println("[Sirviente] Conexión cerrada con el cliente.");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+                System.out.println("[Sirviente] Socket cerrado.");
+            } catch (IOException e) { e.printStackTrace(); }
         }
+    }
+
+    // =========================================================================
+    // IMPLEMENTACIÓN DE BancoInterface
+    // =========================================================================
+
+    @Override
+    public void saludo(String id_cliente, String desafioApp, String hashCliente) {
+        try {
+            // Juntamos el ID con lo que buscamos (ej: "PedroLuis_secwallet")
+            String secretoApp = registroBanco.getValor(id_cliente + "_secwallet");
+            
+            // Si el cliente no existe, abortamos
+            if (secretoApp == null) {
+                System.out.println("[Sirviente] Usuario desconocido.");
+                saludo_err();
+                return;
+            }
+
+            // Calculamos el hash esperado
+            String hashCalculado = digest.generateHash(desafioBanco + secretoApp);
+
+            // Comparamos
+            if (!hashCalculado.equals(hashCliente)) {
+                System.out.println("[Sirviente] El hash no coincide.");
+                saludo_err(); // A3
+            } else {
+                // Todo correcto: calculamos la respuesta del banco
+                // Buscamos el secreto del banco para este usuario (ej: "PedroLuis_SecBanco")
+                String secretoBanco = registroBanco.getValor(id_cliente + "_SecBanco");
+                String hashParaApp = digest.generateHash(desafioApp + secretoBanco);
+
+                System.out.println("[Sirviente] Cliente verificado. Enviando A4.");
+                salida.writeObject(APPBancoPrimitive.A4);
+                salida.writeObject(hashParaApp);
+                salida.flush();
+                saludo_ok();
+            }
+        } catch (Exception e) {
+            System.out.println("[Sirviente] Error verificando al cliente.");
+            saludo_err();
+        }
+    }
+
+    @Override
+    public void saludo_err() {
+        try {
+            System.out.println("[Sirviente] Enviando A3 (Error de autenticación).");
+            salida.writeObject(APPBancoPrimitive.A3);
+            salida.flush();
+        } catch (IOException e) { e.printStackTrace(); }
+    }
+
+    @Override
+    public void saludo_ok() {
+        // Este método simplemente confirma internamente que el banco aceptó al cliente
+        System.out.println("[Sirviente] Registro interno: saludo_ok procesado.");
+    }
+
+    @Override
+    public void m_final() {
+        try {
+            System.out.println("[Sirviente] Recibido A7. Enviando A8 (Final OK).");
+            salida.writeObject(APPBancoPrimitive.A8);
+            salida.flush();
+        } catch (IOException e) { e.printStackTrace(); }
     }
 }
