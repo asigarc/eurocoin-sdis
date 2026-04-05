@@ -1,17 +1,17 @@
 package utiles.digest;
 
 public class Digest {
- private java.security.MessageDigest md ;
+  private java.security.MessageDigest md ;
 
- public Digest(String algorithm) {
-   try {
-     this.md = java.security.MessageDigest.getInstance(algorithm);
-   } catch (java.security.NoSuchAlgorithmException e) {
-     throw new RuntimeException("Digest: No disponible: "+algorithm, e);
-   }
- }
- 
- public String generateHash(String input) {
+  public Digest(String algorithm) {
+    try {
+      this.md = java.security.MessageDigest.getInstance(algorithm);
+    } catch (java.security.NoSuchAlgorithmException e) {
+      throw new RuntimeException("Digest: No disponible: "+algorithm, e);
+    }
+  }
+  
+  public String generateHash(String input) {
       md.update(input.getBytes());
       byte[] digest = md.digest();
 
