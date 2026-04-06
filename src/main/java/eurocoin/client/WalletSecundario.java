@@ -1,22 +1,21 @@
 package eurocoin.client;
 
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 
 import eurocoin.common.APPOfflineMensaje;
 import eurocoin.common.APPOfflinePrimitiva;
-import utiles.digest.Digest;
+import utiles.digest.Digest; // Importamos la clase de tu compañero
+import utiles.movimientos.Movimientos;
 import utiles.registro.Registro;
 
 public class WalletSecundario {
 
     public static void main(String[] args) {
-        int puerto = 3000; // El puerto offline que pide la práctica
+        int puerto = 3000;
 
         try (ServerSocket serverSocket = new ServerSocket(puerto)) {
             System.out.println("[WalletSecundario] Iniciado. Esperando conexiones en el puerto " + puerto + "...");
@@ -40,6 +39,7 @@ public class WalletSecundario {
             // --- PREPARACIÓN ---
             Registro registro = new Registro("Registro.json");
             Digest digest = new Digest(registro.getValor("FuncionHash"));
+            Movimientos movimientos = new Movimientos("Movimientos.txt"); // Instanciamos la clase de tu compañero
             String masterKey = registro.getValor("Masterkey");
             String miNombre = registro.getValor("usuario") + "-TPV"; 
             String miSecreto = registro.getValor("Secwallet");
@@ -72,62 +72,67 @@ public class WalletSecundario {
                     salida.flush();
                     System.out.println("[WalletSecundario] ¡Autenticación completada con éxito!");
 
-                    // --- FASE 3: EL COBRO ---
-                    System.out.println("[WalletSecundario] Esperando transacción (O5)...");
-                    APPOfflineMensaje msgO5 = (APPOfflineMensaje) entrada.readObject();
+                    // --- FASE 3: DETECTAR QUIÉN NOS HABLA ---
+                    System.out.println("[WalletSecundario] Esperando transacción (O5 ingreso o O7 factura)...");
+                    APPOfflineMensaje msgTx = (APPOfflineMensaje) entrada.readObject();
                     
-                    if (msgO5.getPrimitiva() == APPOfflinePrimitiva.O5) {
+                    // CASO 1: OTRO WALLET NOS MANDA DINERO (O5)
+                    if (msgTx.getPrimitiva() == APPOfflinePrimitiva.O5) {
                         System.out.println("[WalletSecundario] Ingreso recibido (O5). Guardando...");
-                        guardarMovimiento(msgO5.getArg1(), msgO5.getArg2());
+                        movimientos.guardarMovimiento(msgTx.getArg1(), msgTx.getArg2());
                         
                         String jsonRecibo = "{ \"op\": \"recibo\", \"de\": \"" + nombrePrim + "\", \"a\": \"" + miNombre + "\", \"cantidad\": \"20\"}";
                         String macRecibo = digest.generateHash(jsonRecibo + miSecreto);
                         
-                        guardarMovimiento(jsonRecibo, macRecibo);
-                        
-                        System.out.println("[WalletSecundario] Enviando recibo (O6)...");
+                        movimientos.guardarMovimiento(jsonRecibo, macRecibo);
                         salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O6, jsonRecibo, macRecibo));
                         salida.flush();
                         
-                        // --- FASE 4: ACTUALIZACIÓN DE SALDO Y DESPEDIDA ---
-                        System.out.println("[WalletSecundario] Sumando 20 EuroCoins a IngresosEC...");
+                        // FASE 4: Cobramos y nos despedimos
                         int ingresosActuales = Integer.parseInt(registro.getValor("IngresosEC"));
                         registro.setValor("IngresosEC", String.valueOf(ingresosActuales + 20));
                         
                         APPOfflineMensaje msgO9 = (APPOfflineMensaje) entrada.readObject();
                         if (msgO9.getPrimitiva() == APPOfflinePrimitiva.O9) {
-                            System.out.println("[WalletSecundario] Recibido O9 (final). Enviando O10 (final_ok)...");
                             salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O10));
                             salida.flush();
                             System.out.println("[WalletSecundario] Desconexión segura completada.");
                         }
-                        
-                    } else {
-                        System.out.println("[WalletSecundario] Se esperaba O5.");
-                    }
-                } else {
-                    System.out.println("[WalletSecundario] Se esperaba O3.");
-                }
-            } else {
-                System.out.println("[WalletSecundario] Se esperaba O1.");
-            }
 
+                    // CASO 2: UN TPV NOS MANDA UNA FACTURA PARA QUE PAGUEMOS (O7)
+                    } else if (msgTx.getPrimitiva() == APPOfflinePrimitiva.O7) {
+                        System.out.println("[WalletSecundario] Factura recibida (O7). Procesando pago...");
+                        movimientos.guardarMovimiento(msgTx.getArg1(), msgTx.getArg2());
+                        
+                        // Generamos el pago (O8)
+                        String jsonPago = "{ \"op\": \"pago\", \"de\": \"" + nombrePrim + "\", \"a\": \"" + miNombre + "\", \"cantidad\": \"25.50\", \"idFactura\": \"FACT-SIMULADA\"}";
+                        String macPago = digest.generateHash(jsonPago + miSecreto);
+                        
+                        movimientos.guardarMovimiento(jsonPago, macPago);
+                        salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O8, jsonPago, macPago));
+                        salida.flush();
+
+                        // FASE 4: Pagamos y nos despedimos
+                        int fondosActuales = Integer.parseInt(registro.getValor("FondosEC"));
+                        registro.setValor("FondosEC", String.valueOf(fondosActuales - 25)); // Descontamos saldo
+                        
+                        APPOfflineMensaje msgO9 = (APPOfflineMensaje) entrada.readObject();
+                        if (msgO9.getPrimitiva() == APPOfflinePrimitiva.O9) {
+                            salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O10));
+                            salida.flush();
+                            System.out.println("[WalletSecundario] Pago al TPV y desconexión completada.");
+                        }
+                    } else {
+                        System.out.println("[WalletSecundario] Mensaje inesperado. Se esperaba O5 o O7.");
+                    }
+                }
+            }
         } catch (Exception e) {
             System.err.println("[WalletSecundario] Error: " + e.getMessage());
         } finally {
             try {
                 if (socket != null) socket.close();
-                System.out.println("[WalletSecundario] Conexión cerrada.");
             } catch (IOException e) { e.printStackTrace(); }
-        }
-    }
-
-    private static void guardarMovimiento(String json, String mac) {
-        try (PrintWriter out = new PrintWriter(new FileWriter("Movimientos.txt", true))) {
-            out.println(json);
-            out.println(mac);
-        } catch (IOException e) {
-            System.err.println("Error al guardar en Movimientos.txt: " + e.getMessage());
         }
     }
 }

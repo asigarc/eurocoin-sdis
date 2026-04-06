@@ -1,15 +1,13 @@
 package eurocoin.client;
 
-import java.io.FileWriter;
-import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.PrintWriter;
 import java.net.Socket;
 
 import eurocoin.common.APPOfflineMensaje;
 import eurocoin.common.APPOfflinePrimitiva;
 import utiles.digest.Digest;
+import utiles.movimientos.Movimientos; // Importamos la clase de tu compañero
 import utiles.registro.Registro;
 
 public class WalletPrimario {
@@ -28,6 +26,7 @@ public class WalletPrimario {
             // --- PREPARACIÓN ---
             Registro registro = new Registro("Registro.json");
             Digest digest = new Digest(registro.getValor("FuncionHash"));
+            Movimientos movimientos = new Movimientos("Movimientos.txt"); // Instanciamos la clase Movimientos
             String masterKey = registro.getValor("Masterkey");
             String miNombre = registro.getValor("usuario");
             String miSecreto = registro.getValor("Secwallet");
@@ -66,7 +65,8 @@ public class WalletPrimario {
                     String jsonIngreso = "{ \"op\": \"ingreso\", \"de\": \"" + miNombre + "\", \"a\": \"" + nombreSecundario + "\", \"cantidad\": \"" + cantidad + "\"}";
                     String macIngreso = digest.generateHash(jsonIngreso + miSecreto);
                     
-                    guardarMovimiento(jsonIngreso, macIngreso);
+                    // Usamos el método de la clase Movimientos
+                    movimientos.guardarMovimiento(jsonIngreso, macIngreso);
                     
                     salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O5, jsonIngreso, macIngreso));
                     salida.flush();
@@ -74,7 +74,9 @@ public class WalletPrimario {
                     APPOfflineMensaje msgO6 = (APPOfflineMensaje) entrada.readObject();
                     if (msgO6.getPrimitiva() == APPOfflinePrimitiva.O6) {
                         System.out.println("[WalletPrimario] Recibido recibo (O6) del Secundario. Guardando...");
-                        guardarMovimiento(msgO6.getArg1(), msgO6.getArg2());
+                        
+                        // Usamos el método de la clase Movimientos
+                        movimientos.guardarMovimiento(msgO6.getArg1(), msgO6.getArg2());
                         System.out.println("[WalletPrimario] ¡Pago completado y guardado con éxito!");
                         
                         // --- FASE 4: ACTUALIZACIÓN DE SALDO Y DESPEDIDA ---
@@ -103,15 +105,6 @@ public class WalletPrimario {
 
         } catch (Exception e) {
             System.err.println("[WalletPrimario] Error: " + e.getMessage());
-        }
-    }
-
-    private static void guardarMovimiento(String json, String mac) {
-        try (PrintWriter out = new PrintWriter(new FileWriter("Movimientos.txt", true))) {
-            out.println(json);
-            out.println(mac);
-        } catch (IOException e) {
-            System.err.println("Error al guardar en Movimientos.txt: " + e.getMessage());
         }
     }
 }
