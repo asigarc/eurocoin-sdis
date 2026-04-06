@@ -20,10 +20,10 @@ public class APPOfflineMensaje implements java.io.Serializable {
   public APPOfflineMensaje(APPOfflinePrimitiva p)
       throws MalMensajeProtocoloException {
     if (p == APPOfflinePrimitiva.O9 || p == APPOfflinePrimitiva.O10) {
-       this.primitiva = p;
-       this.arg1 = this.arg2 = null;
+      this.primitiva = p;
+      this.arg1 = this.arg2 = null;
     } else
-       throw new MalMensajeProtocoloException();
+      throw new MalMensajeProtocoloException();
   }
 
   /* Constructor 1 args para O1,O4 */

@@ -1,9 +1,12 @@
 package eurocoin.server;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
+
 import eurocoin.common.APPBancoPrimitive;
 import eurocoin.common.BancoInterface;
-import java.io.*;
-import java.net.Socket;
 import utiles.digest.Digest;
 import utiles.registro.Registro;
 

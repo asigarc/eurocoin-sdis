@@ -13,8 +13,8 @@ public class PruebaRegistro {
 
          String hashfunc = registro.getValor("FuncionHash");
          System.out.println("Algoritmo: " + hashfunc);
-	 Digest digest   = new Digest(hashfunc);
-	 
+	      Digest digest   = new Digest(hashfunc);
+
          String passwd_pt = "HolaSoyPedroLuis";
          System.out.println("ClaveUsuario: " + passwd_pt);
 
@@ -33,7 +33,7 @@ public class PruebaRegistro {
          }
 
          registro.setValor("FondosEC", "500");
-	 
+
       } catch (java.io.IOException ioe) {
          System.out.println("Hemos tenido problemas para leer Registro.");
       }
