@@ -7,7 +7,7 @@ public class Banco {
 
     public static void main(String[] args) {
         // El puerto donde el servidor va a escuchar (comprueba si el profesor os pide uno específico)
-        int puerto = 1234; 
+        int puerto = 2000; 
 
         try (ServerSocket serverSocket = new ServerSocket(puerto)) {
             System.out.println("[Banco] Servidor iniciado en el puerto " + puerto + ".");

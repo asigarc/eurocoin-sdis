@@ -1,14 +1,14 @@
 package eurocoin.client;
 
 // Utilidades propias del proyecto
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
+
+import eurocoin.common.APPBancoPrimitive;
 import utiles.digest.Digest;
 import utiles.registro.Registro;
-
-// Primitivas del protocolo APP <-> Banco
-import eurocoin.common.APPBancoPrimitive;
-
-import java.io.*;
-import java.net.*;
 
 /**
  * ClienteBanco
@@ -295,4 +295,14 @@ public class ClienteBanco {
             System.out.println("[ClienteBanco] Error al cerrar recursos: " + e.getMessage());
         }
     }
+
+    public static void main(String[] args) {
+        try {
+            ClienteBanco cliente = new ClienteBanco("Registro.json");
+            cliente.iniciar();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 }
