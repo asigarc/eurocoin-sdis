@@ -8,10 +8,12 @@ import java.util.Date;
 import java.util.Map;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 
 import eurocoin.common.APPBancoMensaje; 
 import eurocoin.common.APPBancoPrimitive;
 import eurocoin.common.BancoInterface;
+import eurocoin.common.MalMensajeProtocoloException;
 import eurocoin.util.Digest;
 import eurocoin.util.Registro;
 
@@ -108,7 +110,7 @@ public class BancoSirviente extends Thread implements BancoInterface {
                 System.out.println("[Sirviente] Se esperaba A2, llegó: " + prim);
             }
 
-        } catch (Exception e) {
+        } catch (IOException | ClassNotFoundException e) {
             System.err.println("[Sirviente] Fin de conexión o error: " + e.getMessage());
         } finally {
             // Al terminar, liberamos el ID del usuario del Set para que pueda volver a entrar
@@ -165,7 +167,7 @@ public class BancoSirviente extends Thread implements BancoInterface {
                 salida.flush();
                 saludo_ok();
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             System.out.println("[Sirviente] Error verificando al cliente.");
             saludo_err();
         }
@@ -217,7 +219,7 @@ public class BancoSirviente extends Thread implements BancoInterface {
             salida.flush();
             System.out.println("[Sirviente] Recibo A10 enviado con éxito.");
 
-        } catch (Exception e) {
+        } catch (JsonSyntaxException | MalMensajeProtocoloException | IOException e) {
             System.out.println("[Sirviente] Error al procesar la recarga: " + e.getMessage());
         }
     }
@@ -240,7 +242,7 @@ private void procesarDescarga(String jsonDescarga, String macApp) {
         
         System.out.println("[Sirviente] Los ingresos han sido consolidados. Recibo A12 enviado con éxito.");
 
-    } catch (Exception e) {
+    } catch (JsonSyntaxException | MalMensajeProtocoloException | IOException e) {
         System.out.println("[Sirviente] Error al procesar la descarga: " + e.getMessage());
     }
 }

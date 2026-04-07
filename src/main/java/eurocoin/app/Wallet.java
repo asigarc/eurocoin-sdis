@@ -200,6 +200,7 @@ public class Wallet {
         System.out.print(">>> Introduce la cantidad de EuroCoins a recargar: ");
         String cantidadRecarga = escaner.nextLine();
         
+        
         // 1. Construimos el JSON y su firma
         String jsonRecarga = "{\"op\": \"recarga\", \"titular\": \"" + idCliente + "\", \"cantidad\": \"" + cantidadRecarga + "\"}";
         String secWallet = registro.getValor("SecWallet");
@@ -276,7 +277,7 @@ public class Wallet {
         try {
             Wallet cliente = new Wallet("Registro.json");
             cliente.iniciar();
-        } catch (Exception e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }

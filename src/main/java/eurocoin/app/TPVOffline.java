@@ -56,7 +56,7 @@ public class TPVOffline {
             } else {
                 System.out.println("[TPV] Abortando operación por fallo de seguridad.");
             }
-        } catch (Exception e) {
+        } catch (MalMensajeProtocoloException | IOException | ClassNotFoundException e) {
             System.err.println("[TPV] Error en la transacción: " + e.getMessage());
         } finally {
             cerrar();

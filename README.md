@@ -16,4 +16,16 @@
 [![](https://mermaid.ink/img/pako:eNqFVNtunDAQ_RU0z2RD2F0oqC-59KEPq6KmaqSKF8fMEqfGRrZZpd3y7zXXEhZUJHM5Z-bM8TDyGajMEGKgnGj9wEiuSJEKx15aUefjn6srByslqWRiBmvByhKN7uAhqONIWS7Bz0RQuURQWRRSLDGVYTz9Vzq26_rCUIu-99Pd212NiucObFNGkevR6wyfmJ0xU7czqrPbwPWlj8Hh6CNRFT6Tr5gzbZTcvJITWU22Nse8b8n3L8cjZwInOR0sLtAnwjmaBaiXSBQriGJyPeIRaSWyWUw9_JXOXtstZ3ToOHcN8E6zxx6ZOjEUBtfFugZPxG6TpM09oNDkFWeyA9vshBl2WuDveVvys13qSOh6xGqFvhf_4wcPZGnra-UPhPe6iZLGThKXn94oloZJsd6lZtYmPXpgOWozV5Yn68duTOoZszx14EKuWAbxkXCNLhSoCtJ8Q1spBfOCBaYQ21c7ET9TSEVtk0oifkhZQGzsSLugZJW_jCJVmRGD_eEyogpFhupeVsJA7Ide0KpAfIY3iEN_8yHce14Y-NE22u23LvyC-Mb3Nv5NFPrBPvD3tQu_25qejd1FkcV3wW4bBoHvAmbMSHXoD7fmUf8FUkqPQQ?type=png)](https://mermaid.ai/live/edit#pako:eNqFVNtunDAQ_RU0z2RD2F0oqC-59KEPq6KmaqSKF8fMEqfGRrZZpd3y7zXXEhZUJHM5Z-bM8TDyGajMEGKgnGj9wEiuSJEKx15aUefjn6srByslqWRiBmvByhKN7uAhqONIWS7Bz0RQuURQWRRSLDGVYTz9Vzq26_rCUIu-99Pd212NiucObFNGkevR6wyfmJ0xU7czqrPbwPWlj8Hh6CNRFT6Tr5gzbZTcvJITWU22Nse8b8n3L8cjZwInOR0sLtAnwjmaBaiXSBQriGJyPeIRaSWyWUw9_JXOXtstZ3ToOHcN8E6zxx6ZOjEUBtfFugZPxG6TpM09oNDkFWeyA9vshBl2WuDveVvys13qSOh6xGqFvhf_4wcPZGnra-UPhPe6iZLGThKXn94oloZJsd6lZtYmPXpgOWozV5Yn68duTOoZszx14EKuWAbxkXCNLhSoCtJ8Q1spBfOCBaYQ21c7ET9TSEVtk0oifkhZQGzsSLugZJW_jCJVmRGD_eEyogpFhupeVsJA7Ide0KpAfIY3iEN_8yHce14Y-NE22u23LvyC-Mb3Nv5NFPrBPvD3tQu_25qejd1FkcV3wW4bBoHvAmbMSHXoD7fmUf8FUkqPQQ)
 
 
+**eurocoin/banco/** -> Contiene el codigo del servidor bancario. Banco.java contiene el servidor, y BancoSirviente crea un hilo para cada cliente.  
+
+**eurocoin/app/** -> Contiene las aplicaciones cliente del sistema EuroCoin. Wallet implementa la cartera del usuario, permite recargar dinero, realizar pagos offline y descargar dinero a la cuenta. TPV implementa un terminal que puede solicitar cobros a uuna cartera en modo offline.
+
+**eurocoin/common/** -> clases compartidas entre el banco y las aplicaciones cliente.
+
+**eurocoin/util/** -> Clases de utilidad para el proyecto. Generar MAC, lectura y escritura de archivos json. 
+
+
+
+
+
 >NOTA: Los miembros del equipo manifiestan ser los autores de la práctica presentada en este repositorio. Los autores manifiestan haber realizado la presente práctica ateniéndose al código de conducta establecido por la Universidad de Valladolid para la presentación de trabajos y uso responsable de herramientas de IA
