@@ -1,22 +1,13 @@
 package eurocoin.common;
 
-/*
- * APPOfflineMensaje - Mensaje del Protocolo APP-APP offline
- *
- * Depende de: APPOfflinePrimitiva.java
- *
- * Uso:  APPCliente y derivados: Wallet y TPV
- *
- * Practica de laboratorio EUROCOIN.
- * Sistemas Distribuidos 2025-2026 (C) - UVa.
- */
+// APPOfflineMensaje - Mensaje del Protocolo APP-APP offline
 
 public class APPOfflineMensaje implements java.io.Serializable {
   private final APPOfflinePrimitiva primitiva;
   private final String arg1;
   private final String arg2;
 
-  /* Constructor 0 args para O9 y O10 */
+  // Constructor 0 args para O9 y O10
   public APPOfflineMensaje(APPOfflinePrimitiva p)
       throws MalMensajeProtocoloException {
     if (p == APPOfflinePrimitiva.O9 || p == APPOfflinePrimitiva.O10) {
@@ -26,7 +17,7 @@ public class APPOfflineMensaje implements java.io.Serializable {
       throw new MalMensajeProtocoloException();
   }
 
-  /* Constructor 1 args para O1,O4 */
+  // Constructor 1 args para O1,O4
   public APPOfflineMensaje(APPOfflinePrimitiva p, String arg1)
       throws MalMensajeProtocoloException {
     if (p == APPOfflinePrimitiva.O1 || p == APPOfflinePrimitiva.O4) {
@@ -37,7 +28,7 @@ public class APPOfflineMensaje implements java.io.Serializable {
     this.primitiva = p;
   }
 
-  /* Constructor 2 args para O2, O3, O5, O6, O7, O8 */
+  // Constructor 2 args para O2, O3, O5, O6, O7, O8
   public APPOfflineMensaje(APPOfflinePrimitiva p, String arg1, String arg2)
       throws MalMensajeProtocoloException {
     if (p == APPOfflinePrimitiva.O2 || p == APPOfflinePrimitiva.O3 ||
@@ -55,7 +46,7 @@ public class APPOfflineMensaje implements java.io.Serializable {
   public String getArg2() { return this.arg2; }
 
 
-  public String toString() { /* prettyPrinter de la clase */
+  public String toString() {
     switch (this.primitiva) {
       case O1:
         return "saludo (P->S) "+this.arg1;

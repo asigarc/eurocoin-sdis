@@ -1,4 +1,4 @@
-package eurocoin.client;
+package eurocoin.app;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -9,8 +9,8 @@ import java.net.Socket;
 import eurocoin.common.APPBancoMensaje;
 import eurocoin.common.APPBancoPrimitive;
 import eurocoin.common.MalMensajeProtocoloException;
-import utiles.digest.Digest;
-import utiles.registro.Registro;
+import eurocoin.util.Digest;
+import eurocoin.util.Registro;
 
 public class TPVOnline {
 
@@ -54,7 +54,7 @@ public class TPVOnline {
     }
 
     private boolean autenticar() throws IOException, ClassNotFoundException {
-        // --- Flujo A1 a A6 idéntico al ClienteBanco ---
+        // Flujo A1 a A6 idéntico al ClienteBanco
         APPBancoPrimitive prim = (APPBancoPrimitive) entrada.readObject();
         if (prim != APPBancoPrimitive.A1) return false;
         String desafioBanco = (String) entrada.readObject();

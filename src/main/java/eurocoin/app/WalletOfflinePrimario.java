@@ -1,4 +1,4 @@
-package eurocoin.client;
+package eurocoin.app;
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -6,9 +6,9 @@ import java.net.Socket;
 
 import eurocoin.common.APPOfflineMensaje;
 import eurocoin.common.APPOfflinePrimitiva;
-import utiles.digest.Digest;
-import utiles.movimientos.Movimientos; 
-import utiles.registro.Registro;
+import eurocoin.util.Digest;
+import eurocoin.util.Movimientos;
+import eurocoin.util.Registro;
 
 public class WalletPrimario {
 
@@ -23,7 +23,7 @@ public class WalletPrimario {
             salida.flush();
             ObjectInputStream entrada = new ObjectInputStream(socket.getInputStream());
 
-            // --- PREPARACIÓN ---
+            // PREPARACIÓN
             Registro registro = new Registro("Registro.json");
             Digest digest = new Digest(registro.getValor("FuncionHash"));
             Movimientos movimientos = new Movimientos("Movimientos.txt"); 
@@ -31,7 +31,7 @@ public class WalletPrimario {
             String miNombre = registro.getValor("usuario");
             String miSecreto = registro.getValor("SecWallet");
 
-            // --- FASE 2: AUTENTICACIÓN OFFLINE ---
+            // FASE 2: AUTENTICACIÓN OFFLINE
             System.out.println("[WalletPrimario] Iniciando autenticación offline...");
 
             String desafioPrim = Long.toHexString(System.currentTimeMillis());
@@ -58,7 +58,7 @@ public class WalletPrimario {
                     String nombreSecundario = msgO4.getArg1();
                     System.out.println("[WalletPrimario] ¡Autenticación completada! Secundario es: " + nombreSecundario);
                     
-                    // --- FASE 3: EL PAGO ---
+                    // FASE 3: PAGO
                     System.out.println("[WalletPrimario] Iniciando transacción (O5)...");
                     java.util.Scanner escaner = new java.util.Scanner(System.in);
                     System.out.print(">>> Introduce la cantidad de EuroCoins a enviar: ");
@@ -84,7 +84,7 @@ public class WalletPrimario {
                         } catch (InterruptedException e) {
                         }
                         
-                        // --- FASE 4: ACTUALIZACIÓN DE SALDO Y DESPEDIDA ---
+                        // FASE 4: ACTUALIZACIÓN DE SALDO Y DESPEDIDA
                         System.out.println("[WalletPrimario] Restando 20 EuroCoins de FondosEC...");
                         double fondosActuales = Double.parseDouble(registro.getValor("FondosEC"));
                         registro.setValor("FondosEC", String.valueOf(fondosActuales - 20.0));

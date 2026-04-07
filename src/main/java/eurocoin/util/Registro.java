@@ -1,4 +1,4 @@
-package utiles.registro;
+package eurocoin.util;
 
 // trabajo con Json en Gson
 import com.google.gson.Gson;

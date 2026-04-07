@@ -1,17 +1,8 @@
 package eurocoin.common;
 
-/*
- * APPBancoPrimitiva - Enum de Primitivas para protocolo APP-Banco
- *
- * Uso: APPBancoMensaje.java
- *      APPBanco y derivados.
- *      APPCliente y derivados.
- *
- * Practica de laboratorio EUROCOIN.
- * Sistemas Distribuidos 2025-2026 (C) - UVa.
- */
+// APPBancoPrimitiva - Enum de Primitivas para protocolo APP-Banco
 
-public enum APPBancoPrimitive  { //implements java.io.Serializable
+public enum APPBancoPrimitive  {
   A1,    // saludo(desafio_banco) banco->app
   A2,    // saludo(id_cliente, desafio_app,hash(desafio_banco+secreto_app)) app->banco
   A3,    // saludo_err banco->app

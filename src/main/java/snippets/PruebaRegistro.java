@@ -2,8 +2,8 @@ package snippets;
 
 
 // función de hash criptografica
-import utiles.digest.Digest;
-import utiles.registro.Registro;
+import eurocoin.util.Digest;
+import eurocoin.util.Registro;
 
 
 public class PruebaRegistro {

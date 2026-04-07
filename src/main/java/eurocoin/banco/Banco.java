@@ -1,4 +1,4 @@
-package eurocoin.server;
+package eurocoin.banco;
 
 import java.net.ServerSocket;
 import java.net.Socket;

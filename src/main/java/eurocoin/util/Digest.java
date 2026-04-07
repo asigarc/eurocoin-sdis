@@ -1,4 +1,4 @@
-package utiles.digest;
+package eurocoin.util;
 
 public class Digest {
   private java.security.MessageDigest md ;

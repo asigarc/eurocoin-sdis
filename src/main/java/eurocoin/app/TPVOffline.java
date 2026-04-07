@@ -1,4 +1,4 @@
-package eurocoin.client;
+package eurocoin.app;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -8,14 +8,11 @@ import java.net.Socket;
 import eurocoin.common.APPOfflineMensaje;
 import eurocoin.common.APPOfflinePrimitiva;
 import eurocoin.common.MalMensajeProtocoloException;
-import utiles.movimientos.Movimientos;
-import utiles.digest.Digest;
-import utiles.registro.Registro;
+import eurocoin.util.Movimientos;
+import eurocoin.util.Digest;
+import eurocoin.util.Registro;
 
-/**
- * Clase TPV (Terminal de Punto de Venta)
- * Actúa siempre como PRIMARIO en el protocolo offline.
- */
+// Clase TPV (Terminal de Punto de Venta)
 public class TPV {
 
     private static final String HOST_SECUNDARIO = "localhost";
@@ -79,17 +76,16 @@ public class TPV {
         }
     }
 
-    /**
-     * Autenticación Offline (Primitivas O1 a O4)
-     */
+    // Autenticación Offline (Primitivas O1 a O4)
+
     private boolean autenticarOffline() throws IOException, ClassNotFoundException, MalMensajeProtocoloException {
-        // --- O1: TPV -> Wallet (envía desafio_prim) ---
+        // O1: TPV -> Wallet (envía desafio_prim)
         String desafioPrim = Long.toHexString(System.currentTimeMillis());
         System.out.println("[TPV] Enviando O1 con desafioPrim: " + desafioPrim);
         salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O1, desafioPrim));
         salida.flush();
 
-        // --- O2: Wallet -> TPV (recibe desafio_sec y hash) ---
+        // O2: Wallet -> TPV (recibe desafio_sec y hash)
         APPOfflineMensaje msgO2 = (APPOfflineMensaje) entrada.readObject();
         if (msgO2.getPrimitiva() != APPOfflinePrimitiva.O2) return false;
 
@@ -103,13 +99,13 @@ public class TPV {
             return false;
         }
 
-        // --- O3: TPV -> Wallet (envía idVendedor y hash validando el desafio_sec) ---
+        // O3: TPV -> Wallet (envía idVendedor y hash validando el desafio_sec)
         String miHash = digest.generateHash(desafioSec + masterkey);
         System.out.println("[TPV] Hash correcto. Enviando O3...");
         salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O3, idVendedor, miHash));
         salida.flush();
 
-        // --- O4: Wallet -> TPV (recibe idCliente) ---
+        // O4: Wallet -> TPV (recibe idCliente)
         APPOfflineMensaje msgO4 = (APPOfflineMensaje) entrada.readObject();
         if (msgO4.getPrimitiva() != APPOfflinePrimitiva.O4) return false;
 
@@ -117,9 +113,8 @@ public class TPV {
         return true;
     }
 
-    /**
-     * Proceso de Facturación y Pago (Primitivas O7 a O10)
-     */
+    // Proceso de Facturación y Pago (Primitivas O7 a O10)
+
     private void facturar() throws IOException, ClassNotFoundException, MalMensajeProtocoloException {
         String idFactura = "FACT-" + System.currentTimeMillis();
         
@@ -137,12 +132,12 @@ public class TPV {
         movimientos.guardarMovimiento(jsonFactura, macFactura);
         System.out.println("[TPV] Factura guardada en movimientos.");
 
-        // 4. --- O7: TPV -> Wallet (Enviar Factura) ---
+        // 4. O7: TPV -> Wallet (Enviar Factura)
         System.out.println("[TPV] Enviando O7 (Factura)...");
         salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O7, jsonFactura, macFactura));
         salida.flush();
 
-        // 5. --- O8: Wallet -> TPV (Recibir Pago) ---
+        // 5. O8: Wallet -> TPV (Recibir Pago)
         APPOfflineMensaje msgO8 = (APPOfflineMensaje) entrada.readObject();
         if (msgO8.getPrimitiva() == APPOfflinePrimitiva.O8) {
             String jsonPago = msgO8.getArg1();
@@ -167,7 +162,7 @@ public class TPV {
             return; // Abortamos si no hay pago
         }
 
-        // 7. --- Despedida O9 y O10 ---
+        // 7. Despedida O9 y O10
         System.out.println("[TPV] Enviando O9 (Final)...");
         salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O9));
         salida.flush();

@@ -1,4 +1,4 @@
-package eurocoin.client;
+package eurocoin.app;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -11,9 +11,9 @@ import com.google.gson.Gson;
 
 import eurocoin.common.APPOfflineMensaje;
 import eurocoin.common.APPOfflinePrimitiva;
-import utiles.digest.Digest; 
-import utiles.movimientos.Movimientos;
-import utiles.registro.Registro;
+import eurocoin.util.Digest;
+import eurocoin.util.Movimientos;
+import eurocoin.util.Registro;
 
 public class WalletSecundario {
 
@@ -76,10 +76,9 @@ public class WalletSecundario {
 
                     System.out.println("[WalletSecundario] Esperando transacción (O5 ingreso o O7 factura)...");
                     APPOfflineMensaje msgTx = (APPOfflineMensaje) entrada.readObject();
-                    
-                    // ========================================================
+
                     // CASO 1: OTRO WALLET NOS MANDA DINERO (O5)
-                    // ========================================================
+
                     if (msgTx.getPrimitiva() == APPOfflinePrimitiva.O5) {
                         // Extraemos la cantidad que nos han enviado dinámicamente
                         Map<String, String> datosIngreso = gson.fromJson(msgTx.getArg1(), Map.class);
@@ -106,9 +105,8 @@ public class WalletSecundario {
                             System.out.println("[WalletSecundario] Desconexión segura completada.");
                         }
 
-                    // ========================================================
                     // CASO 2: UN TPV NOS MANDA UNA FACTURA PARA QUE PAGUEMOS (O7)
-                    // ========================================================
+
                     } else if (msgTx.getPrimitiva() == APPOfflinePrimitiva.O7) {
                         // Extraemos la cantidad que nos piden y el ID de la factura
                         Map<String, String> datosFactura = gson.fromJson(msgTx.getArg1(), Map.class);

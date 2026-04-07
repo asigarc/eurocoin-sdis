@@ -1,4 +1,4 @@
-package eurocoin.server;
+package eurocoin.banco;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -12,8 +12,8 @@ import com.google.gson.Gson;
 import eurocoin.common.APPBancoMensaje; 
 import eurocoin.common.APPBancoPrimitive;
 import eurocoin.common.BancoInterface;
-import utiles.digest.Digest;
-import utiles.registro.Registro;
+import eurocoin.util.Digest;
+import eurocoin.util.Registro;
 
 public class Sirviente extends Thread implements BancoInterface {
 
@@ -73,10 +73,8 @@ public class Sirviente extends Thread implements BancoInterface {
                 
                 if (respuestaApp == APPBancoPrimitive.A5) {
                     System.out.println("[Sirviente] ¡Autenticación mutua OK (A5)!");
-                    
-                    // =========================================================
+
                     // MÓDULO 3: Bucle de operaciones (Recargas y Descargas)
-                    // =========================================================
                     boolean operando = true;
                     while (operando) {
                         System.out.println("[Sirviente] Esperando operación de la APP...");
@@ -128,9 +126,7 @@ public class Sirviente extends Thread implements BancoInterface {
         }
     }
 
-    // =========================================================================
     // IMPLEMENTACIÓN DE BancoInterface
-    // =========================================================================
 
     @Override
     public void saludo(String id_cliente, String desafioApp, String hashCliente) {
@@ -198,9 +194,7 @@ public class Sirviente extends Thread implements BancoInterface {
         } catch (IOException e) { e.printStackTrace(); }
     }
 
-    // =========================================================================
     // MÓDULO 3: Operaciones del Banco
-    // =========================================================================
 
     private void procesarRecarga(String jsonRecarga, String macApp) {
         try {
