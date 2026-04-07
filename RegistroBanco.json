@@ -1,4 +1,6 @@
 {
   "PedroLuis_secwallet": "Secreto-PedroLuis",
-  "PedroLuis_SecBanco": "Secreto-BancoBob"
+  "PedroLuis_SecBanco": "Secreto-BancoBob",
+  "TiendaPaco_secwallet": "Secreto-Paco",
+  "TiendaPaco_SecBanco": "Secreto-BancoPaco"
 }

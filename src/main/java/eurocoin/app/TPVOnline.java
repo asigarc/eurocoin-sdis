@@ -29,7 +29,8 @@ public class TPVOnline {
     }
 
     public void iniciar() {
-        if (!conectar()) return;
+        if (!conectar())
+            return;
         try {
             if (autenticar()) {
                 System.out.println("[TPVOnline] Autenticación completada con éxito.");
@@ -50,13 +51,16 @@ public class TPVOnline {
             salida.flush();
             entrada = new ObjectInputStream(socket.getInputStream());
             return true;
-        } catch (IOException e) { return false; }
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     private boolean autenticar() throws IOException, ClassNotFoundException {
         // Flujo A1 a A6 idéntico al ClienteBanco
         APPBancoPrimitive prim = (APPBancoPrimitive) entrada.readObject();
-        if (prim != APPBancoPrimitive.A1) return false;
+        if (prim != APPBancoPrimitive.A1)
+            return false;
         String desafioBanco = (String) entrada.readObject();
 
         String idCliente = registro.getValor("usuario");
@@ -71,11 +75,12 @@ public class TPVOnline {
         salida.flush();
 
         APPBancoPrimitive respBanco = (APPBancoPrimitive) entrada.readObject();
-        if (respBanco == APPBancoPrimitive.A3) return false;
+        if (respBanco == APPBancoPrimitive.A3)
+            return false;
 
         String respuestaBanco = (String) entrada.readObject();
         String secretoBanco = registro.getValor("SecBanco");
-        
+
         if (digest.generateHash(desafioApp + secretoBanco).equals(respuestaBanco)) {
             salida.writeObject(APPBancoPrimitive.A5);
             salida.flush();
@@ -93,14 +98,15 @@ public class TPVOnline {
 
         String idCliente = registro.getValor("usuario");
         String ingresosOffline = registro.getValor("IngresosEC");
-        
+
         if (ingresosOffline == null || ingresosOffline.equals("0")) {
             System.out.println("[TPVOnline] No hay ingresos offline que descargar.");
             return;
         }
 
-        // 1. Construir JSON A11 
-        String jsonDescarga = "{\"op\": \"descarga\", \"titular\": \"" + idCliente + "\", \"cantidad\": \"" + ingresosOffline + "\"}";
+        // 1. Construir JSON A11
+        String jsonDescarga = "{\"op\": \"descarga\", \"titular\": \"" + idCliente + "\", \"cantidad\": \""
+                + ingresosOffline + "\"}";
         String secWallet = registro.getValor("SecWallet");
         String macDescarga = digest.generateHash(jsonDescarga + secWallet);
 
@@ -117,10 +123,10 @@ public class TPVOnline {
 
             // 4. Resetear los IngresosEC a "0"
             registro.setValor("IngresosEC", "0");
-            
+
             // 5. Vaciar el archivo Movimientos.txt (consolidación)
             new PrintWriter("Movimientos.txt").close();
-            
+
             System.out.println("[TPVOnline] Movimientos offline limpiados y consolidados correctamente.");
         } else {
             System.out.println("[TPVOnline] Error en la descarga (No llegó A12).");
@@ -135,15 +141,21 @@ public class TPVOnline {
 
     private void cerrar() {
         try {
-            if (salida != null) salida.close();
-            if (entrada != null) entrada.close();
-            if (socket != null) socket.close();
-        } catch (IOException e) { }
+            if (salida != null)
+                salida.close();
+            if (entrada != null)
+                entrada.close();
+            if (socket != null)
+                socket.close();
+        } catch (IOException e) {
+        }
     }
 
     public static void main(String[] args) {
         try {
             new TPVOnline("Registro.json").iniciar();
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

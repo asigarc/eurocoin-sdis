@@ -43,21 +43,21 @@ public class WalletOfflineSecundario {
 
             Registro registro = new Registro("Registro.json");
             Digest digest = new Digest(registro.getValor("FuncionHash"));
-            Movimientos movimientos = new Movimientos("Movimientos.txt"); 
+            Movimientos movimientos = new Movimientos("Movimientos.txt");
             String masterKey = registro.getValor("Masterkey");
-            String miNombre = registro.getValor("usuario"); 
+            String miNombre = registro.getValor("usuario");
             String miSecreto = registro.getValor("SecWallet");
             Gson gson = new Gson(); // Para parsear los JSON recibidos
 
             System.out.println("[WalletSecundario] Listo para iniciar la autenticación offline...");
-            
+
             APPOfflineMensaje msgO1 = (APPOfflineMensaje) entrada.readObject();
             if (msgO1.getPrimitiva() == APPOfflinePrimitiva.O1) {
                 String desafioPrim = msgO1.getArg1();
-                
+
                 String desafioSec = Long.toHexString(System.currentTimeMillis() + 1000);
                 String hashParaPrim = digest.generateHash(desafioPrim + masterKey);
-                
+
                 salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O2, desafioSec, hashParaPrim));
                 salida.flush();
 
@@ -66,7 +66,7 @@ public class WalletOfflineSecundario {
                     String nombrePrim = msgO3.getArg1();
                     String hashRecibido = msgO3.getArg2();
                     String hashEsperado = digest.generateHash(desafioSec + masterKey);
-                    
+
                     if (!hashEsperado.equals(hashRecibido)) {
                         System.out.println("[WalletSecundario] Error grave de autenticación.");
                         return;
@@ -85,21 +85,24 @@ public class WalletOfflineSecundario {
                         // Extraemos la cantidad que nos han enviado dinámicamente
                         Map<String, String> datosIngreso = gson.fromJson(msgTx.getArg1(), Map.class);
                         String cantidadRecibida = datosIngreso.get("cantidad");
-                        
-                        System.out.println("[WalletSecundario] Ingreso recibido (O5) por valor de " + cantidadRecibida + " EC. Guardando...");
+
+                        System.out.println("[WalletSecundario] Ingreso recibido (O5) por valor de " + cantidadRecibida
+                                + " EC. Guardando...");
                         movimientos.guardarMovimiento(msgTx.getArg1(), msgTx.getArg2());
-                        
-                        String jsonRecibo = "{ \"op\": \"recibo\", \"de\": \"" + nombrePrim + "\", \"a\": \"" + miNombre + "\", \"cantidad\": \"" + cantidadRecibida + "\"}";
+
+                        String jsonRecibo = "{ \"op\": \"recibo\", \"de\": \"" + nombrePrim + "\", \"a\": \"" + miNombre
+                                + "\", \"cantidad\": \"" + cantidadRecibida + "\"}";
                         String macRecibo = digest.generateHash(jsonRecibo + miSecreto);
-                        
+
                         movimientos.guardarMovimiento(jsonRecibo, macRecibo);
                         salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O6, jsonRecibo, macRecibo));
                         salida.flush();
-                        
+
                         // Actualizamos nuestros ingresos
                         double ingresosActuales = Double.parseDouble(registro.getValor("IngresosEC"));
-                        registro.setValor("IngresosEC", String.valueOf(ingresosActuales + Double.parseDouble(cantidadRecibida)));
-                        
+                        registro.setValor("IngresosEC",
+                                String.valueOf(ingresosActuales + Double.parseDouble(cantidadRecibida)));
+
                         APPOfflineMensaje msgO9 = (APPOfflineMensaje) entrada.readObject();
                         if (msgO9.getPrimitiva() == APPOfflinePrimitiva.O9) {
                             salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O10));
@@ -107,41 +110,44 @@ public class WalletOfflineSecundario {
                             System.out.println("[WalletSecundario] Desconexión segura completada.");
                         }
 
-                    // CASO 2: UN TPV NOS MANDA UNA FACTURA PARA QUE PAGUEMOS (O7)
+                        // CASO 2: UN TPV NOS MANDA UNA FACTURA PARA QUE PAGUEMOS (O7)
 
                     } else if (msgTx.getPrimitiva() == APPOfflinePrimitiva.O7) {
                         // Extraemos la cantidad que nos piden y el ID de la factura
                         Map<String, String> datosFactura = gson.fromJson(msgTx.getArg1(), Map.class);
                         String cantidadAPagar = datosFactura.get("cantidad");
                         String idFactura = datosFactura.get("idFactura");
-                        
-                        System.out.println("[WalletSecundario] Factura " + idFactura + " recibida (O7) por valor de " + cantidadAPagar + " EC. Procesando pago...");
-                        
+
+                        System.out.println("[WalletSecundario] Factura " + idFactura + " recibida (O7) por valor de "
+                                + cantidadAPagar + " EC. Procesando pago...");
+
                         double saldoDisponible = Double.parseDouble(registro.getValor("FondosEC"));
                         double cantidadNecesaria = Double.parseDouble(cantidadAPagar);
-                        
+
                         if (cantidadNecesaria > saldoDisponible) {
-                             System.out.println("[WalletSecundario] ERROR: Saldo insuficiente para pagar la factura.");
-                            
-                             salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O9));
-                             salida.flush();
-                             return; // Cortamos y no pagamos nada
+                            System.out.println("[WalletSecundario] ERROR: Saldo insuficiente para pagar la factura.");
+
+                            salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O9));
+                            salida.flush();
+                            return; // Cortamos y no pagamos nada
                         }
 
                         movimientos.guardarMovimiento(msgTx.getArg1(), msgTx.getArg2());
-                        
+
                         // Generamos el pago (O8) usando los datos dinámicos
-                        String jsonPago = "{ \"op\": \"pago\", \"de\": \"" + nombrePrim + "\", \"a\": \"" + miNombre + "\", \"cantidad\": \"" + cantidadAPagar + "\", \"idFactura\": \"" + idFactura + "\"}";
+                        String jsonPago = "{ \"op\": \"pago\", \"de\": \"" + nombrePrim + "\", \"a\": \"" + miNombre
+                                + "\", \"cantidad\": \"" + cantidadAPagar + "\", \"idFactura\": \"" + idFactura + "\"}";
                         String macPago = digest.generateHash(jsonPago + miSecreto);
-                        
+
                         movimientos.guardarMovimiento(jsonPago, macPago);
                         salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O8, jsonPago, macPago));
                         salida.flush();
 
                         // Descontamos el saldo
                         double fondosActuales = Double.parseDouble(registro.getValor("FondosEC"));
-                        registro.setValor("FondosEC", String.valueOf(fondosActuales - Double.parseDouble(cantidadAPagar))); 
-                        
+                        registro.setValor("FondosEC",
+                                String.valueOf(fondosActuales - Double.parseDouble(cantidadAPagar)));
+
                         APPOfflineMensaje msgO9 = (APPOfflineMensaje) entrada.readObject();
                         if (msgO9.getPrimitiva() == APPOfflinePrimitiva.O9) {
                             salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O10));
@@ -153,12 +159,16 @@ public class WalletOfflineSecundario {
                     }
                 }
             }
-        } catch (JsonSyntaxException | MalMensajeProtocoloException | IOException | ClassNotFoundException | NumberFormatException e) {
+        } catch (JsonSyntaxException | MalMensajeProtocoloException | IOException | ClassNotFoundException
+                | NumberFormatException e) {
             System.err.println("[WalletSecundario] Error: " + e.getMessage());
         } finally {
             try {
-                if (socket != null) socket.close();
-            } catch (IOException e) { e.printStackTrace(); }
+                if (socket != null)
+                    socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }

@@ -10,7 +10,7 @@ import java.util.Map;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
-import eurocoin.common.APPBancoMensaje; 
+import eurocoin.common.APPBancoMensaje;
 import eurocoin.common.APPBancoPrimitive;
 import eurocoin.common.BancoInterface;
 import eurocoin.common.MalMensajeProtocoloException;
@@ -25,12 +25,13 @@ public class BancoSirviente extends Thread implements BancoInterface {
     private Registro registroBanco;
     private Digest digest;
 
-    // Guardamos el desafío del banco a nivel de clase para poder usarlo en los métodos de la interfaz
+    // Guardamos el desafío del banco a nivel de clase para poder usarlo en los
+    // métodos de la interfaz
     private String desafioBanco;
-    
+
     // Guardamos el ID del cliente una vez autenticado para usarlo en las recargas
     private String idClienteAutenticado = null;
-    
+
     // Objeto Gson para leer las cantidades dinámicas (PUNTO 4)
     private final Gson gson = new Gson();
 
@@ -46,12 +47,12 @@ public class BancoSirviente extends Thread implements BancoInterface {
             salida.flush();
             entrada = new ObjectInputStream(socketCliente.getInputStream());
 
-            // 2. Cargar utilidades 
+            // 2. Cargar utilidades
             registroBanco = new Registro("RegistroBanco.json");
-            digest = new Digest("SHA-256"); 
+            digest = new Digest("SHA-256");
 
             // ---- INICIO DEL PROTOCOLO ----
-            
+
             // A1: Banco -> APP saludo(desafio_banco)
             desafioBanco = Long.toHexString(System.currentTimeMillis());
             System.out.println("[Sirviente] Enviando A1 y desafioBanco: " + desafioBanco);
@@ -61,18 +62,18 @@ public class BancoSirviente extends Thread implements BancoInterface {
 
             // A2: APP -> Banco saludo(desafio_app, id_cliente, hash)
             APPBancoPrimitive prim = (APPBancoPrimitive) entrada.readObject();
-            
+
             if (prim == APPBancoPrimitive.A2) {
                 String desafioApp = (String) entrada.readObject();
                 String idCliente = (String) entrada.readObject();
                 String hashCliente = (String) entrada.readObject();
-                
+
                 System.out.println("[Sirviente] Recibido A2 del cliente: " + idCliente);
 
                 saludo(idCliente, desafioApp, hashCliente);
 
                 APPBancoPrimitive respuestaApp = (APPBancoPrimitive) entrada.readObject();
-                
+
                 if (respuestaApp == APPBancoPrimitive.A5) {
                     System.out.println("[Sirviente] ¡Autenticación mutua OK (A5)!");
 
@@ -86,23 +87,22 @@ public class BancoSirviente extends Thread implements BancoInterface {
                             APPBancoPrimitive primOp = (APPBancoPrimitive) peticion;
                             if (primOp == APPBancoPrimitive.A7) {
                                 System.out.println("[Sirviente] La APP ha solicitado desconexión (A7).");
-                                m_final(); 
-                                operando = false; 
+                                m_final();
+                                operando = false;
                             }
                         } else if (peticion instanceof APPBancoMensaje) {
                             APPBancoMensaje msg = (APPBancoMensaje) peticion;
-                            
+
                             if (msg.getPrimitiva() == APPBancoPrimitive.A9) {
                                 System.out.println("[Sirviente] Petición de recarga (A9) recibida.");
-                                procesarRecarga(msg.getArg1(), msg.getArg2()); 
-                            } 
-                            else if (msg.getPrimitiva() == APPBancoPrimitive.A11) {
+                                procesarRecarga(msg.getArg1(), msg.getArg2());
+                            } else if (msg.getPrimitiva() == APPBancoPrimitive.A11) {
                                 System.out.println("[Sirviente] Petición de descarga (A11) recibida.");
                                 procesarDescarga(msg.getArg1(), msg.getArg2());
                             }
                         }
                     }
-                    
+
                 } else if (respuestaApp == APPBancoPrimitive.A6) {
                     System.out.println("[Sirviente] La APP rechazó nuestra autenticación (A6).");
                 }
@@ -113,18 +113,24 @@ public class BancoSirviente extends Thread implements BancoInterface {
         } catch (IOException | ClassNotFoundException e) {
             System.err.println("[Sirviente] Fin de conexión o error: " + e.getMessage());
         } finally {
-            // Al terminar, liberamos el ID del usuario del Set para que pueda volver a entrar
+            // Al terminar, liberamos el ID del usuario del Set para que pueda volver a
+            // entrar
             if (idClienteAutenticado != null) {
                 Banco.usuariosActivos.remove(idClienteAutenticado);
             }
-            
+
             // Limpieza de recursos
             try {
-                if (salida != null) salida.close();
-                if (entrada != null) entrada.close();
-                if (socketCliente != null) socketCliente.close();
+                if (salida != null)
+                    salida.close();
+                if (entrada != null)
+                    entrada.close();
+                if (socketCliente != null)
+                    socketCliente.close();
                 System.out.println("[Sirviente] Socket cerrado.");
-            } catch (IOException e) { e.printStackTrace(); }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -135,13 +141,14 @@ public class BancoSirviente extends Thread implements BancoInterface {
         try {
             // Evitar conexiones duplicadas del mismo usuario
             if (Banco.usuariosActivos.contains(id_cliente)) {
-                System.out.println("[Sirviente] Acceso denegado: El usuario " + id_cliente + " ya tiene una sesión abierta.");
+                System.out.println(
+                        "[Sirviente] Acceso denegado: El usuario " + id_cliente + " ya tiene una sesión abierta.");
                 saludo_err();
                 return;
             }
 
             String secretoApp = registroBanco.getValor(id_cliente + "_secwallet");
-            
+
             if (secretoApp == null) {
                 System.out.println("[Sirviente] Usuario desconocido.");
                 saludo_err();
@@ -152,7 +159,7 @@ public class BancoSirviente extends Thread implements BancoInterface {
 
             if (!hashCalculado.equals(hashCliente)) {
                 System.out.println("[Sirviente] El hash no coincide.");
-                saludo_err(); 
+                saludo_err();
             } else {
                 // Todo correcto: marcamos al usuario como activo oficialmente
                 this.idClienteAutenticado = id_cliente;
@@ -179,7 +186,9 @@ public class BancoSirviente extends Thread implements BancoInterface {
             System.out.println("[Sirviente] Enviando A3 (Error de autenticación).");
             salida.writeObject(APPBancoPrimitive.A3);
             salida.flush();
-        } catch (IOException e) { e.printStackTrace(); }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -193,7 +202,9 @@ public class BancoSirviente extends Thread implements BancoInterface {
             System.out.println("[Sirviente] Recibido A7. Enviando A8 (Final OK).");
             salida.writeObject(APPBancoPrimitive.A8);
             salida.flush();
-        } catch (IOException e) { e.printStackTrace(); }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     // MÓDULO 3: Operaciones del Banco
@@ -203,13 +214,15 @@ public class BancoSirviente extends Thread implements BancoInterface {
             // Parseamos el JSON para obtener la cantidad real que pide el cliente
             Map<String, String> datosPeticion = gson.fromJson(jsonRecarga, Map.class);
             String cantidad = datosPeticion.get("cantidad");
-            
-            System.out.println("[Sirviente] Autorizando recarga de " + cantidad + " EC para el cliente " + idClienteAutenticado + "...");
+
+            System.out.println("[Sirviente] Autorizando recarga de " + cantidad + " EC para el cliente "
+                    + idClienteAutenticado + "...");
 
             // Incluimos la fecha oficial del Banco en el recibo
             String fecha = new Date().toString();
-            String jsonRecibo = "{\"op\": \"recibo-recarga\", \"titular\": \"" + idClienteAutenticado + "\", \"cantidad\": \"" + cantidad + "\", \"fecha\": \"" + fecha + "\"}";
-            
+            String jsonRecibo = "{\"op\": \"recibo-recarga\", \"titular\": \"" + idClienteAutenticado
+                    + "\", \"cantidad\": \"" + cantidad + "\", \"fecha\": \"" + fecha + "\"}";
+
             // Firmamos el recibo con el Secreto del Banco
             String secretoBanco = registroBanco.getValor(idClienteAutenticado + "_SecBanco");
             String macBanco = digest.generateHash(jsonRecibo + secretoBanco);
@@ -224,26 +237,28 @@ public class BancoSirviente extends Thread implements BancoInterface {
         }
     }
 
-private void procesarDescarga(String jsonDescarga, String macApp) {
-    try {
-        Map<String, String> datosPeticion = gson.fromJson(jsonDescarga, Map.class);
-        String cantidad = datosPeticion.get("cantidad");
-        
-        System.out.println("[Sirviente] Procesando descarga de ingresos por valor de " + cantidad + " para " + idClienteAutenticado + "...");
+    private void procesarDescarga(String jsonDescarga, String macApp) {
+        try {
+            Map<String, String> datosPeticion = gson.fromJson(jsonDescarga, Map.class);
+            String cantidad = datosPeticion.get("cantidad");
 
-        String fecha = new Date().toString();
-        String jsonRecibo = "{\"op\": \"recibo-descarga\", \"titular\": \"" + idClienteAutenticado + "\", \"cantidad\": \"" + cantidad + "\", \"fecha\": \"" + fecha + "\"}";
-        
-        String secretoBanco = registroBanco.getValor(idClienteAutenticado + "_SecBanco");
-        String macBanco = digest.generateHash(jsonRecibo + secretoBanco);
+            System.out.println("[Sirviente] Procesando descarga de ingresos por valor de " + cantidad + " para "
+                    + idClienteAutenticado + "...");
 
-        salida.writeObject(new APPBancoMensaje(APPBancoPrimitive.A12, jsonRecibo, macBanco));
-        salida.flush();
-        
-        System.out.println("[Sirviente] Los ingresos han sido consolidados. Recibo A12 enviado con éxito.");
+            String fecha = new Date().toString();
+            String jsonRecibo = "{\"op\": \"recibo-descarga\", \"titular\": \"" + idClienteAutenticado
+                    + "\", \"cantidad\": \"" + cantidad + "\", \"fecha\": \"" + fecha + "\"}";
 
-    } catch (JsonSyntaxException | MalMensajeProtocoloException | IOException e) {
-        System.out.println("[Sirviente] Error al procesar la descarga: " + e.getMessage());
+            String secretoBanco = registroBanco.getValor(idClienteAutenticado + "_SecBanco");
+            String macBanco = digest.generateHash(jsonRecibo + secretoBanco);
+
+            salida.writeObject(new APPBancoMensaje(APPBancoPrimitive.A12, jsonRecibo, macBanco));
+            salida.flush();
+
+            System.out.println("[Sirviente] Los ingresos han sido consolidados. Recibo A12 enviado con éxito.");
+
+        } catch (JsonSyntaxException | MalMensajeProtocoloException | IOException e) {
+            System.out.println("[Sirviente] Error al procesar la descarga: " + e.getMessage());
+        }
     }
-}
 }

@@ -41,36 +41,43 @@ public class APPOfflineMensaje implements java.io.Serializable {
     this.primitiva = p;
   }
 
-  public APPOfflinePrimitiva getPrimitiva() { return this.primitiva; }
-  public String getArg1() { return this.arg1; }
-  public String getArg2() { return this.arg2; }
+  public APPOfflinePrimitiva getPrimitiva() {
+    return this.primitiva;
+  }
 
+  public String getArg1() {
+    return this.arg1;
+  }
+
+  public String getArg2() {
+    return this.arg2;
+  }
 
   @Override
   public String toString() {
     switch (this.primitiva) {
       case O1:
-        return "saludo (P->S) "+this.arg1;
+        return "saludo (P->S) " + this.arg1;
       case O2:
-        return "saludo (S->P) "+this.arg1+":"+this.arg2;
+        return "saludo (S->P) " + this.arg1 + ":" + this.arg2;
       case O3:
-        return "saludo_ok (P->S) "+this.arg1+":"+this.arg2;
+        return "saludo_ok (P->S) " + this.arg1 + ":" + this.arg2;
       case O4:
-        return "saludo_ok (S->P) "+this.arg1;
+        return "saludo_ok (S->P) " + this.arg1;
       case O5:
-        return "ingreso (P->S) "+this.arg1+"\n"+this.arg2;
+        return "ingreso (P->S) " + this.arg1 + "\n" + this.arg2;
       case O6:
-        return "recibo (P->S) "+this.arg1+"\n"+this.arg2;
+        return "recibo (P->S) " + this.arg1 + "\n" + this.arg2;
       case O7:
-        return "factura (P->S) "+this.arg1+"\n"+this.arg2;
+        return "factura (P->S) " + this.arg1 + "\n" + this.arg2;
       case O8:
-        return "pago (P->S) "+this.arg1+"\n"+this.arg2;
+        return "pago (P->S) " + this.arg1 + "\n" + this.arg2;
       case O9:
         return "final (P->S)";
       case O10:
         return "final_ok (S->P)";
-      default :
-        return "Codigo de primitiva no encontrado." ;
+      default:
+        return "Codigo de primitiva no encontrado.";
     }
   }
 }

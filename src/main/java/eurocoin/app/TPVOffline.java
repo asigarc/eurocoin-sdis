@@ -87,7 +87,8 @@ public class TPVOffline {
 
         // O2: Wallet -> TPV (recibe desafio_sec y hash)
         APPOfflineMensaje msgO2 = (APPOfflineMensaje) entrada.readObject();
-        if (msgO2.getPrimitiva() != APPOfflinePrimitiva.O2) return false;
+        if (msgO2.getPrimitiva() != APPOfflinePrimitiva.O2)
+            return false;
 
         String desafioSec = msgO2.getArg1();
         String hashRecibido = msgO2.getArg2();
@@ -107,7 +108,8 @@ public class TPVOffline {
 
         // O4: Wallet -> TPV (recibe idCliente)
         APPOfflineMensaje msgO4 = (APPOfflineMensaje) entrada.readObject();
-        if (msgO4.getPrimitiva() != APPOfflinePrimitiva.O4) return false;
+        if (msgO4.getPrimitiva() != APPOfflinePrimitiva.O4)
+            return false;
 
         this.idCliente = msgO4.getArg1();
         return true;
@@ -117,14 +119,15 @@ public class TPVOffline {
 
     private void facturar() throws IOException, ClassNotFoundException, MalMensajeProtocoloException {
         String idFactura = "FACT-" + System.currentTimeMillis();
-        
+
         java.util.Scanner escaner = new java.util.Scanner(System.in);
         System.out.print(">>> Introduce el importe de la factura a cobrar: ");
         String cantidad = escaner.nextLine();
 
         // 1. Construir el documento JSON de la factura EXACTO
-        String jsonFactura = "{ \"op\": \"factura\", \"de\": \"" + idVendedor + "\", \"a\": \"" + idCliente + "\", \"cantidad\": \"" + cantidad + "\", \"idFactura\": \"" + idFactura + "\" }";
-        
+        String jsonFactura = "{ \"op\": \"factura\", \"de\": \"" + idVendedor + "\", \"a\": \"" + idCliente
+                + "\", \"cantidad\": \"" + cantidad + "\", \"idFactura\": \"" + idFactura + "\" }";
+
         // 2. Calcular el MAC (Hash del JSON + Secreto Privado)
         String macFactura = digest.generateHash(jsonFactura + secWallet);
 
@@ -149,11 +152,12 @@ public class TPVOffline {
 
             try {
                 Thread.sleep(1000);
-            } catch (InterruptedException e) { 
+            } catch (InterruptedException e) {
             }
 
             String ingresosActuales = registro.getValor("IngresosEC");
-            if (ingresosActuales == null) ingresosActuales = "0.0";
+            if (ingresosActuales == null)
+                ingresosActuales = "0.0";
             double nuevosIngresos = Double.parseDouble(ingresosActuales) + Double.parseDouble(cantidad);
             registro.setValor("IngresosEC", String.valueOf(nuevosIngresos));
 
@@ -175,9 +179,12 @@ public class TPVOffline {
 
     private void cerrar() {
         try {
-            if (salida != null) salida.close();
-            if (entrada != null) entrada.close();
-            if (socket != null) socket.close();
+            if (salida != null)
+                salida.close();
+            if (entrada != null)
+                entrada.close();
+            if (socket != null)
+                socket.close();
         } catch (IOException e) {
             System.out.println("[TPV] Error cerrando recursos: " + e.getMessage());
         }

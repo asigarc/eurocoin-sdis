@@ -1,4 +1,0 @@
-{"op": "recarga", "titular": "PedroLuis", "cantidad": "10"}
-7e401df345775e2c56de952249eebbad8143775516adf009f0d1dd2616267c0d
-{"op": "recibo-recarga", "titular": "PedroLuis", "cantidad": "10", "fecha": "Tue Apr 07 16:30:13 CEST 2026"}
-aa938ed5737a31e53fad89ce9890b891a66d282b741b3e17cca9303d0e3e0cbf

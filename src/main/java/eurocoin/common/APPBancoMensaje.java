@@ -10,8 +10,8 @@ public class APPBancoMensaje implements java.io.Serializable {
     // Constructor 0 args
     public APPBancoMensaje(APPBancoPrimitive p) throws MalMensajeProtocoloException {
         if (p == APPBancoPrimitive.A3 || p == APPBancoPrimitive.A5 ||
-            p == APPBancoPrimitive.A6 || p == APPBancoPrimitive.A7 ||
-            p == APPBancoPrimitive.A8) {
+                p == APPBancoPrimitive.A6 || p == APPBancoPrimitive.A7 ||
+                p == APPBancoPrimitive.A8) {
 
             this.primitiva = p;
             this.arg1 = this.arg2 = this.arg3 = null;
@@ -39,7 +39,7 @@ public class APPBancoMensaje implements java.io.Serializable {
             throws MalMensajeProtocoloException {
 
         if (p == APPBancoPrimitive.A9 || p == APPBancoPrimitive.A10 ||
-            p == APPBancoPrimitive.A11 || p == APPBancoPrimitive.A12) {
+                p == APPBancoPrimitive.A11 || p == APPBancoPrimitive.A12) {
 
             this.primitiva = p;
             this.arg1 = arg1;
@@ -84,19 +84,32 @@ public class APPBancoMensaje implements java.io.Serializable {
     @Override
     public String toString() {
         switch (primitiva) {
-            case A1: return "A1 " + arg1;
-            case A2: return "A2 " + arg1 + " " + arg2 + " " + arg3;
-            case A3: return "A3";
-            case A4: return "A4 " + arg1;
-            case A5: return "A5";
-            case A6: return "A6";
-            case A7: return "A7";
-            case A8: return "A8";
-            case A9: return "A9 " + arg1 + " " + arg2;
-            case A10: return "A10 " + arg1 + " " + arg2;
-            case A11: return "A11 " + arg1 + " " + arg2;
-            case A12: return "A12 " + arg1 + " " + arg2;
-            default: return "Error";
+            case A1:
+                return "A1 " + arg1;
+            case A2:
+                return "A2 " + arg1 + " " + arg2 + " " + arg3;
+            case A3:
+                return "A3";
+            case A4:
+                return "A4 " + arg1;
+            case A5:
+                return "A5";
+            case A6:
+                return "A6";
+            case A7:
+                return "A7";
+            case A8:
+                return "A8";
+            case A9:
+                return "A9 " + arg1 + " " + arg2;
+            case A10:
+                return "A10 " + arg1 + " " + arg2;
+            case A11:
+                return "A11 " + arg1 + " " + arg2;
+            case A12:
+                return "A12 " + arg1 + " " + arg2;
+            default:
+                return "Error";
         }
     }
-} 
+}
