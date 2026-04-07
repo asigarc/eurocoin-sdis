@@ -7,7 +7,7 @@ import java.net.Socket;
 import eurocoin.common.APPOfflineMensaje;
 import eurocoin.common.APPOfflinePrimitiva;
 import utiles.digest.Digest;
-import utiles.movimientos.Movimientos; // Importamos la clase de tu compañero
+import utiles.movimientos.Movimientos; 
 import utiles.registro.Registro;
 
 public class WalletPrimario {
@@ -26,10 +26,10 @@ public class WalletPrimario {
             // --- PREPARACIÓN ---
             Registro registro = new Registro("Registro.json");
             Digest digest = new Digest(registro.getValor("FuncionHash"));
-            Movimientos movimientos = new Movimientos("Movimientos.txt"); // Instanciamos la clase Movimientos
+            Movimientos movimientos = new Movimientos("Movimientos.txt"); 
             String masterKey = registro.getValor("Masterkey");
             String miNombre = registro.getValor("usuario");
-            String miSecreto = registro.getValor("Secwallet");
+            String miSecreto = registro.getValor("SecWallet");
 
             // --- FASE 2: AUTENTICACIÓN OFFLINE ---
             System.out.println("[WalletPrimario] Iniciando autenticación offline...");
@@ -60,12 +60,13 @@ public class WalletPrimario {
                     
                     // --- FASE 3: EL PAGO ---
                     System.out.println("[WalletPrimario] Iniciando transacción (O5)...");
-                    String cantidad = "20"; 
+                    java.util.Scanner escaner = new java.util.Scanner(System.in);
+                    System.out.print(">>> Introduce la cantidad de EuroCoins a enviar: ");
+                    String cantidad = escaner.nextLine();
                     
                     String jsonIngreso = "{ \"op\": \"ingreso\", \"de\": \"" + miNombre + "\", \"a\": \"" + nombreSecundario + "\", \"cantidad\": \"" + cantidad + "\"}";
                     String macIngreso = digest.generateHash(jsonIngreso + miSecreto);
                     
-                    // Usamos el método de la clase Movimientos
                     movimientos.guardarMovimiento(jsonIngreso, macIngreso);
                     
                     salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O5, jsonIngreso, macIngreso));
@@ -75,14 +76,18 @@ public class WalletPrimario {
                     if (msgO6.getPrimitiva() == APPOfflinePrimitiva.O6) {
                         System.out.println("[WalletPrimario] Recibido recibo (O6) del Secundario. Guardando...");
                         
-                        // Usamos el método de la clase Movimientos
                         movimientos.guardarMovimiento(msgO6.getArg1(), msgO6.getArg2());
                         System.out.println("[WalletPrimario] ¡Pago completado y guardado con éxito!");
+
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e) {
+                        }
                         
                         // --- FASE 4: ACTUALIZACIÓN DE SALDO Y DESPEDIDA ---
                         System.out.println("[WalletPrimario] Restando 20 EuroCoins de FondosEC...");
-                        int fondosActuales = Integer.parseInt(registro.getValor("FondosEC"));
-                        registro.setValor("FondosEC", String.valueOf(fondosActuales - 20));
+                        double fondosActuales = Double.parseDouble(registro.getValor("FondosEC"));
+                        registro.setValor("FondosEC", String.valueOf(fondosActuales - 20.0));
                         
                         System.out.println("[WalletPrimario] Enviando O9 (final)...");
                         salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O9));

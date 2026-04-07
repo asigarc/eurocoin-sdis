@@ -122,7 +122,10 @@ public class TPV {
      */
     private void facturar() throws IOException, ClassNotFoundException, MalMensajeProtocoloException {
         String idFactura = "FACT-" + System.currentTimeMillis();
-        String cantidad = "25.50"; // Cantidad simulada
+        
+        java.util.Scanner escaner = new java.util.Scanner(System.in);
+        System.out.print(">>> Introduce el importe de la factura a cobrar: ");
+        String cantidad = escaner.nextLine();
 
         // 1. Construir el documento JSON de la factura EXACTO
         String jsonFactura = "{ \"op\": \"factura\", \"de\": \"" + idVendedor + "\", \"a\": \"" + idCliente + "\", \"cantidad\": \"" + cantidad + "\", \"idFactura\": \"" + idFactura + "\" }";
@@ -148,6 +151,17 @@ public class TPV {
             // 6. Guardar el pago recibido en Movimientos.txt
             movimientos.guardarMovimiento(jsonPago, macPago);
             System.out.println("[TPV] Pago O8 recibido y guardado en movimientos. ¡Venta completada!");
+
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) { 
+            }
+
+            String ingresosActuales = registro.getValor("IngresosEC");
+            if (ingresosActuales == null) ingresosActuales = "0.0";
+            double nuevosIngresos = Double.parseDouble(ingresosActuales) + Double.parseDouble(cantidad);
+            registro.setValor("IngresosEC", String.valueOf(nuevosIngresos));
+
         } else {
             System.out.println("[TPV] Error: Se esperaba el pago O8 pero llegó " + msgO8.getPrimitiva());
             return; // Abortamos si no hay pago

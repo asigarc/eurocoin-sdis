@@ -6,7 +6,10 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
+import eurocoin.common.APPBancoMensaje; // Añadido para el Módulo 3
 import eurocoin.common.APPBancoPrimitive;
+import eurocoin.common.MalMensajeProtocoloException; // Añadido para el Módulo 3
+import utiles.movimientos.Movimientos; // Añadido para el Módulo 3
 import utiles.digest.Digest;
 import utiles.registro.Registro;
 
@@ -19,18 +22,18 @@ import utiles.registro.Registro;
  *
  * Flujo del protocolo (primitivas A1-A8):
  *
- *   Banco → APP  A1: saludo(desafio_banco)
- *   APP → Banco  A2: saludo(desafio_app, id_cliente, HASH(desafio_banco + secreto_app))
- *   Banco → APP  A3: saludo_err          [si falla la auth del cliente]
- *   Banco → APP  A4: saludo_ok(respuesta) [respuesta = HASH(desafio_app + secreto_banco)]
- *   APP → Banco  A5: saludo_ok           [si la respuesta del banco es correcta]
- *   APP → Banco  A6: saludo_err          [si la respuesta del banco es incorrecta]
- *   APP → Banco  A7: final
- *   Banco → APP  A8: final_ok
+ * Banco → APP  A1: saludo(desafio_banco)
+ * APP → Banco  A2: saludo(desafio_app, id_cliente, HASH(desafio_banco + secreto_app))
+ * Banco → APP  A3: saludo_err          [si falla la auth del cliente]
+ * Banco → APP  A4: saludo_ok(respuesta) [respuesta = HASH(desafio_app + secreto_banco)]
+ * APP → Banco  A5: saludo_ok           [si la respuesta del banco es correcta]
+ * APP → Banco  A6: saludo_err          [si la respuesta del banco es incorrecta]
+ * APP → Banco  A7: final
+ * Banco → APP  A8: final_ok
  *
  * Uso típico:
- *   ClienteBanco cliente = new ClienteBanco("Registro.json");
- *   cliente.iniciar();
+ * ClienteBanco cliente = new ClienteBanco("Registro.json");
+ * cliente.iniciar();
  */
 public class ClienteBanco {
 
@@ -63,6 +66,9 @@ public class ClienteBanco {
     /** Función de hash usada en el protocolo. */
     private final Digest digest;
 
+    /** Gestor de movimientos para registrar los recibos del banco. */
+    private final Movimientos movimientos; // Añadido para el Módulo 3
+
     // -------------------------------------------------------------------------
     // Constructor
     // -------------------------------------------------------------------------
@@ -79,6 +85,9 @@ public class ClienteBanco {
         // Leemos el algoritmo de hash del registro (ej: "SHA-256")
         String hashFunc = registro.getValor("FuncionHash");
         this.digest = new Digest(hashFunc);
+
+        // Inicializamos el gestor de movimientos para guardar los recibos
+        this.movimientos = new Movimientos("Movimientos.txt"); // Añadido para el Módulo 3
 
         System.out.println("[ClienteBanco] Iniciado. Hash: " + hashFunc);
     }
@@ -113,9 +122,13 @@ public class ClienteBanco {
 
             // -- Pasos 7-8: Operar en modo online y luego cerrar sesión --
             System.out.println("[ClienteBanco] MODO ONLINE: autenticación completada con éxito.");
+            
+            pedirRecarga(); // MÓDULO 3: Solicitamos la recarga de fondos
+            
             operarYDespedirse();
 
-        } catch (IOException | ClassNotFoundException e) {
+        // Se han añadido ClassNotFoundException y MalMensajeProtocoloException
+        } catch (IOException | ClassNotFoundException | MalMensajeProtocoloException e) {
             System.out.println("[ClienteBanco] Error durante la sesión: " + e.getMessage());
         } finally {
             cerrar();
@@ -238,6 +251,57 @@ public class ClienteBanco {
             salida.writeObject(APPBancoPrimitive.A6);
             salida.flush();
             return false;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Módulo 3: Petición de recarga al banco (Primitivas A9 y A10)
+    // -------------------------------------------------------------------------
+
+    private void pedirRecarga() throws IOException, ClassNotFoundException, MalMensajeProtocoloException {
+        System.out.println("--------------------------------------------------");
+        System.out.println(" Iniciando proceso de recarga de fondos...");
+        System.out.println("--------------------------------------------------");
+
+        String idCliente = registro.getValor("usuario");
+        java.util.Scanner escaner = new java.util.Scanner(System.in);
+        System.out.print(">>> Introduce la cantidad de EuroCoins a recargar: ");
+        String cantidadRecarga = escaner.nextLine();
+        
+        // 1. Construimos el JSON y su firma
+        String jsonRecarga = "{\"op\": \"recarga\", \"titular\": \"" + idCliente + "\", \"cantidad\": \"" + cantidadRecarga + "\"}";
+        String secWallet = registro.getValor("SecWallet");
+        String macRecarga = digest.generateHash(jsonRecarga + secWallet);
+
+        // 2. Guardamos la operación saliente en Movimientos.txt
+        movimientos.guardarMovimiento(jsonRecarga, macRecarga);
+
+        // 3. Enviamos A9 al banco usando el nuevo "sobre" APPBancoMensaje
+        System.out.println("[ClienteBanco] Enviando A9: Solicitando " + cantidadRecarga + " al banco...");
+        salida.writeObject(new APPBancoMensaje(APPBancoPrimitive.A9, jsonRecarga, macRecarga));
+        salida.flush();
+
+        // 4. Esperamos la confirmación A10
+        APPBancoMensaje respuesta = (APPBancoMensaje) entrada.readObject();
+
+        if (respuesta.getPrimitiva() == APPBancoPrimitive.A10) {
+            String jsonRecibo = respuesta.getArg1();
+            String macRecibo = respuesta.getArg2();
+
+            // 5. Guardamos el recibo entrante en Movimientos.txt
+            movimientos.guardarMovimiento(jsonRecibo, macRecibo);
+
+            // 6. Actualizamos nuestros fondos en el Registro
+            String fondosActuales = registro.getValor("FondosEC");
+            if (fondosActuales == null) fondosActuales = "0.0"; // Por precaución
+            
+            double nuevosFondos = Double.parseDouble(fondosActuales) + Double.parseDouble(cantidadRecarga);
+            registro.setValor("FondosEC", String.valueOf(nuevosFondos));
+
+            System.out.println("[ClienteBanco] ¡Recarga completada! Saldo actualizado: " + nuevosFondos + " EC");
+            System.out.println("--------------------------------------------------");
+        } else {
+            System.out.println("[ClienteBanco] Error en recarga. Se esperaba A10 pero llegó: " + respuesta.getPrimitiva());
         }
     }
 
