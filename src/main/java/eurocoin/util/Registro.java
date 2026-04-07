@@ -10,7 +10,7 @@ public class Registro {
    private final String nombreArchivo;
 
    public Registro(String nArch) throws java.io.IOException {
-      this.nombreArchivo = new String(nArch);
+      this.nombreArchivo = nArch;
 
       java.io.File f = new java.io.File(nombreArchivo);
       if (!f.exists()) throw new java.io.IOException("No existe el archivo: "+nArch);
@@ -48,6 +48,5 @@ public class Registro {
 
       archivo2.print(prettyRegistro);
       archivo2.close();
-      return;
    }
 }

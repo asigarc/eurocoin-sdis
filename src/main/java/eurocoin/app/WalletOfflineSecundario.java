@@ -8,9 +8,11 @@ import java.net.Socket;
 import java.util.Map;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 
 import eurocoin.common.APPOfflineMensaje;
 import eurocoin.common.APPOfflinePrimitiva;
+import eurocoin.common.MalMensajeProtocoloException;
 import eurocoin.util.Digest;
 import eurocoin.util.Movimientos;
 import eurocoin.util.Registro;
@@ -139,7 +141,7 @@ public class WalletOfflineSecundario {
                     }
                 }
             }
-        } catch (Exception e) {
+        } catch (JsonSyntaxException | MalMensajeProtocoloException | IOException | ClassNotFoundException | NumberFormatException e) {
             System.err.println("[WalletSecundario] Error: " + e.getMessage());
         } finally {
             try {

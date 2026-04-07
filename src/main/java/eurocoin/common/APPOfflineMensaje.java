@@ -21,7 +21,7 @@ public class APPOfflineMensaje implements java.io.Serializable {
   public APPOfflineMensaje(APPOfflinePrimitiva p, String arg1)
       throws MalMensajeProtocoloException {
     if (p == APPOfflinePrimitiva.O1 || p == APPOfflinePrimitiva.O4) {
-      this.arg1 = new String(arg1);
+      this.arg1 = arg1;
       this.arg2 = null;
     } else
       throw new MalMensajeProtocoloException();
@@ -34,8 +34,8 @@ public class APPOfflineMensaje implements java.io.Serializable {
     if (p == APPOfflinePrimitiva.O2 || p == APPOfflinePrimitiva.O3 ||
         p == APPOfflinePrimitiva.O5 || p == APPOfflinePrimitiva.O6 ||
         p == APPOfflinePrimitiva.O7 || p == APPOfflinePrimitiva.O8) {
-      this.arg1 = new String(arg1);
-      this.arg2 = new String(arg2);
+      this.arg1 = arg1;
+      this.arg2 = arg2;
     } else
       throw new MalMensajeProtocoloException();
     this.primitiva = p;
@@ -46,6 +46,7 @@ public class APPOfflineMensaje implements java.io.Serializable {
   public String getArg2() { return this.arg2; }
 
 
+  @Override
   public String toString() {
     switch (this.primitiva) {
       case O1:
