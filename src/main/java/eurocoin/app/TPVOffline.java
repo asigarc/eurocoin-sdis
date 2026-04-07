@@ -8,12 +8,12 @@ import java.net.Socket;
 import eurocoin.common.APPOfflineMensaje;
 import eurocoin.common.APPOfflinePrimitiva;
 import eurocoin.common.MalMensajeProtocoloException;
-import eurocoin.util.Movimientos;
 import eurocoin.util.Digest;
+import eurocoin.util.Movimientos;
 import eurocoin.util.Registro;
 
 // Clase TPV (Terminal de Punto de Venta)
-public class TPV {
+public class TPVOffline {
 
     private static final String HOST_SECUNDARIO = "localhost";
     private static final int PUERTO_SECUNDARIO = 3000;
@@ -31,7 +31,7 @@ public class TPV {
     private String secWallet;
     private String idCliente; // Se obtiene durante la autenticación O4
 
-    public TPV(String archivoRegistro, String archivoMovimientos) throws IOException {
+    public TPVOffline(String archivoRegistro, String archivoMovimientos) throws IOException {
         this.registro = new Registro(archivoRegistro);
         String algoritmo = registro.getValor("FuncionHash");
         this.digest = new Digest(algoritmo);
@@ -186,7 +186,7 @@ public class TPV {
     public static void main(String[] args) {
         try {
             // Asegúrate de que tienes un archivo Movimientos.txt vacío o creado en la raíz
-            TPV tpv = new TPV("Registro.json", "Movimientos.txt");
+            TPVOffline tpv = new TPVOffline("Registro.json", "Movimientos.txt");
             tpv.iniciar();
         } catch (IOException e) {
             System.err.println("[TPV] Error de I/O al arrancar: " + e.getMessage());

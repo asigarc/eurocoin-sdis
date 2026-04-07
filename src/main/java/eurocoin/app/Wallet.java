@@ -8,13 +8,13 @@ import java.net.Socket;
 import eurocoin.common.APPBancoMensaje;
 import eurocoin.common.APPBancoPrimitive;
 import eurocoin.common.MalMensajeProtocoloException;
-import eurocoin.util.Movimientos;
 import eurocoin.util.Digest;
+import eurocoin.util.Movimientos;
 import eurocoin.util.Registro;
 
 // Esta clase gestiona la conexión con el Servidor Bancario y lleva a cabo la autenticación mutua APPBancoProtocol
 
-public class ClienteBanco {
+public class Wallet {
 
     // Configuración de la conexión
 
@@ -45,8 +45,8 @@ public class ClienteBanco {
 
     // Constructor
 
-    // Crea un ClienteBanco cargando los datos desde el archivo de registro
-    public ClienteBanco(String archivoRegistro) throws IOException {
+    // Crea un Wallet cargando los datos desde el archivo de registro
+    public Wallet(String archivoRegistro) throws IOException {
         this.registro = new Registro(archivoRegistro);
 
         // Leemos el algoritmo de hash del registro
@@ -274,7 +274,7 @@ public class ClienteBanco {
 
     public static void main(String[] args) {
         try {
-            ClienteBanco cliente = new ClienteBanco("Registro.json");
+            Wallet cliente = new Wallet("Registro.json");
             cliente.iniciar();
         } catch (Exception e) {
             e.printStackTrace();

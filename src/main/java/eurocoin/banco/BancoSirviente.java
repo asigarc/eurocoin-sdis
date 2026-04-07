@@ -4,9 +4,9 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
-
-import java.util.Map;
 import java.util.Date;
+import java.util.Map;
+
 import com.google.gson.Gson;
 
 import eurocoin.common.APPBancoMensaje; 
@@ -15,7 +15,7 @@ import eurocoin.common.BancoInterface;
 import eurocoin.util.Digest;
 import eurocoin.util.Registro;
 
-public class Sirviente extends Thread implements BancoInterface {
+public class BancoSirviente extends Thread implements BancoInterface {
 
     private Socket socketCliente;
     private ObjectOutputStream salida;
@@ -32,7 +32,7 @@ public class Sirviente extends Thread implements BancoInterface {
     // Objeto Gson para leer las cantidades dinámicas (PUNTO 4)
     private Gson gson = new Gson();
 
-    public Sirviente(Socket socketCliente) {
+    public BancoSirviente(Socket socketCliente) {
         this.socketCliente = socketCliente;
     }
 

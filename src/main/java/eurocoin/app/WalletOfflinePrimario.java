@@ -10,7 +10,7 @@ import eurocoin.util.Digest;
 import eurocoin.util.Movimientos;
 import eurocoin.util.Registro;
 
-public class WalletPrimario {
+public class WalletOfflinePrimario {
 
     public static void main(String[] args) {
         String host = "localhost";

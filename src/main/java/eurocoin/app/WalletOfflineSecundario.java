@@ -5,8 +5,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-
 import java.util.Map;
+
 import com.google.gson.Gson;
 
 import eurocoin.common.APPOfflineMensaje;
@@ -15,7 +15,7 @@ import eurocoin.util.Digest;
 import eurocoin.util.Movimientos;
 import eurocoin.util.Registro;
 
-public class WalletSecundario {
+public class WalletOfflineSecundario {
 
     public static void main(String[] args) {
         int puerto = 3000;

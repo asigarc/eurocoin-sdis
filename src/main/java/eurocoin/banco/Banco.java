@@ -21,7 +21,7 @@ public class Banco {
                 Socket socketCliente = serverSocket.accept();
                 System.out.println("[Banco] ¡Nuevo cliente detectado! IP: " + socketCliente.getInetAddress());
                 
-                new Sirviente(socketCliente).start();
+                new BancoSirviente(socketCliente).start();
             }
         } catch (Exception e) {
             System.err.println("[Banco] Error crítico en el servidor: " + e.getMessage());
