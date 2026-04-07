@@ -26,9 +26,9 @@ public class TPVOffline {
     private final Digest digest;
     private final Movimientos movimientos;
 
-    private String idVendedor;
-    private String masterkey;
-    private String secWallet;
+    private final String idVendedor;
+    private final String masterkey;
+    private final String secWallet;
     private String idCliente; // Se obtiene durante la autenticación O4
 
     public TPVOffline(String archivoRegistro, String archivoMovimientos) throws IOException {

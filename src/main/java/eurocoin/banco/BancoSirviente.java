@@ -17,7 +17,7 @@ import eurocoin.util.Registro;
 
 public class BancoSirviente extends Thread implements BancoInterface {
 
-    private Socket socketCliente;
+    private final Socket socketCliente;
     private ObjectOutputStream salida;
     private ObjectInputStream entrada;
     private Registro registroBanco;
@@ -30,7 +30,7 @@ public class BancoSirviente extends Thread implements BancoInterface {
     private String idClienteAutenticado = null;
     
     // Objeto Gson para leer las cantidades dinámicas (PUNTO 4)
-    private Gson gson = new Gson();
+    private final Gson gson = new Gson();
 
     public BancoSirviente(Socket socketCliente) {
         this.socketCliente = socketCliente;
