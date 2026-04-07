@@ -114,6 +114,18 @@ public class WalletOfflineSecundario {
                         String idFactura = datosFactura.get("idFactura");
                         
                         System.out.println("[WalletSecundario] Factura " + idFactura + " recibida (O7) por valor de " + cantidadAPagar + " EC. Procesando pago...");
+                        
+                        double saldoDisponible = Double.parseDouble(registro.getValor("FondosEC"));
+                        double cantidadNecesaria = Double.parseDouble(cantidadAPagar);
+                        
+                        if (cantidadNecesaria > saldoDisponible) {
+                             System.out.println("[WalletSecundario] ERROR: Saldo insuficiente para pagar la factura.");
+                            
+                             salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O9));
+                             salida.flush();
+                             return; // Cortamos y no pagamos nada
+                        }
+
                         movimientos.guardarMovimiento(msgTx.getArg1(), msgTx.getArg2());
                         
                         // Generamos el pago (O8) usando los datos dinámicos

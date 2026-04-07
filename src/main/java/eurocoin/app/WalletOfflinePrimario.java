@@ -63,6 +63,19 @@ public class WalletOfflinePrimario {
                     java.util.Scanner escaner = new java.util.Scanner(System.in);
                     System.out.print(">>> Introduce la cantidad de EuroCoins a enviar: ");
                     String cantidad = escaner.nextLine();
+
+                    double saldoDisponible = Double.parseDouble(registro.getValor("FondosEC"));
+                    double cantidadDeseada = Double.parseDouble(cantidad);
+                    
+                    if (cantidadDeseada > saldoDisponible) {
+                        System.out.println("[WalletPrimario] ERROR: Saldo insuficiente. Tienes " + saldoDisponible + " EC, pero intentas enviar " + cantidadDeseada + " EC.");
+                        
+                        // Enviamos O9 para cerrar la conexión amistosamente ya que no podemos pagar
+                        salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O9));
+                        salida.flush();
+                        entrada.readObject(); // Esperar el O10
+                        return; // Cortamos la ejecución
+                    }
                     
                     String jsonIngreso = "{ \"op\": \"ingreso\", \"de\": \"" + miNombre + "\", \"a\": \"" + nombreSecundario + "\", \"cantidad\": \"" + cantidad + "\"}";
                     String macIngreso = digest.generateHash(jsonIngreso + miSecreto);
@@ -85,9 +98,9 @@ public class WalletOfflinePrimario {
                         }
                         
                         // FASE 4: ACTUALIZACIÓN DE SALDO Y DESPEDIDA
-                        System.out.println("[WalletPrimario] Restando 20 EuroCoins de FondosEC...");
+                        System.out.println("[WalletPrimario] Restando " + cantidad + " EuroCoins de FondosEC...");
                         double fondosActuales = Double.parseDouble(registro.getValor("FondosEC"));
-                        registro.setValor("FondosEC", String.valueOf(fondosActuales - 20.0));
+                        registro.setValor("FondosEC", String.valueOf(fondosActuales - Double.parseDouble(cantidad)));
                         
                         System.out.println("[WalletPrimario] Enviando O9 (final)...");
                         salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O9));
