@@ -2,7 +2,7 @@ package eurocoin.common;
 
 // APPBancoPrimitiva - Enum de Primitivas para protocolo APP-Banco
 
-public enum APPBancoPrimitive {
+public enum APPBancoPrimitiva implements java.io.Serializable {
   A1, // saludo(desafio_banco) banco->app
   A2, // saludo(id_cliente, desafio_app,hash(desafio_banco+secreto_app)) app->banco
   A3, // saludo_err banco->app

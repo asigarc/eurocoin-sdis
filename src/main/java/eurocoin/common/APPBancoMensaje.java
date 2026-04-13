@@ -2,16 +2,16 @@ package eurocoin.common;
 
 public class APPBancoMensaje implements java.io.Serializable {
 
-    private final APPBancoPrimitive primitiva;
+    private final APPBancoPrimitiva primitiva;
     private final String arg1;
     private final String arg2;
     private final String arg3;
 
     // Constructor 0 args
-    public APPBancoMensaje(APPBancoPrimitive p) throws MalMensajeProtocoloException {
-        if (p == APPBancoPrimitive.A3 || p == APPBancoPrimitive.A5 ||
-                p == APPBancoPrimitive.A6 || p == APPBancoPrimitive.A7 ||
-                p == APPBancoPrimitive.A8) {
+    public APPBancoMensaje(APPBancoPrimitiva p) throws MalMensajeProtocoloException {
+        if (p == APPBancoPrimitiva.A3 || p == APPBancoPrimitiva.A5 ||
+                p == APPBancoPrimitiva.A6 || p == APPBancoPrimitiva.A7 ||
+                p == APPBancoPrimitiva.A8) {
 
             this.primitiva = p;
             this.arg1 = this.arg2 = this.arg3 = null;
@@ -22,10 +22,10 @@ public class APPBancoMensaje implements java.io.Serializable {
     }
 
     // Constructor 1 arg
-    public APPBancoMensaje(APPBancoPrimitive p, String arg1)
+    public APPBancoMensaje(APPBancoPrimitiva p, String arg1)
             throws MalMensajeProtocoloException {
 
-        if (p == APPBancoPrimitive.A1 || p == APPBancoPrimitive.A4) {
+        if (p == APPBancoPrimitiva.A1 || p == APPBancoPrimitiva.A4) {
             this.primitiva = p;
             this.arg1 = arg1;
             this.arg2 = this.arg3 = null;
@@ -35,11 +35,11 @@ public class APPBancoMensaje implements java.io.Serializable {
     }
 
     // Constructor 2 args
-    public APPBancoMensaje(APPBancoPrimitive p, String arg1, String arg2)
+    public APPBancoMensaje(APPBancoPrimitiva p, String arg1, String arg2)
             throws MalMensajeProtocoloException {
 
-        if (p == APPBancoPrimitive.A9 || p == APPBancoPrimitive.A10 ||
-                p == APPBancoPrimitive.A11 || p == APPBancoPrimitive.A12) {
+        if (p == APPBancoPrimitiva.A9 || p == APPBancoPrimitiva.A10 ||
+                p == APPBancoPrimitiva.A11 || p == APPBancoPrimitiva.A12) {
 
             this.primitiva = p;
             this.arg1 = arg1;
@@ -52,10 +52,10 @@ public class APPBancoMensaje implements java.io.Serializable {
     }
 
     // Constructor 3 args
-    public APPBancoMensaje(APPBancoPrimitive p, String arg1, String arg2, String arg3)
+    public APPBancoMensaje(APPBancoPrimitiva p, String arg1, String arg2, String arg3)
             throws MalMensajeProtocoloException {
 
-        if (p == APPBancoPrimitive.A2) {
+        if (p == APPBancoPrimitiva.A2) {
             this.primitiva = p;
             this.arg1 = arg1;
             this.arg2 = arg2;
@@ -65,7 +65,7 @@ public class APPBancoMensaje implements java.io.Serializable {
         }
     }
 
-    public APPBancoPrimitive getPrimitiva() {
+    public APPBancoPrimitiva getPrimitiva() {
         return primitiva;
     }
 

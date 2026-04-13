@@ -2,7 +2,7 @@ package eurocoin.common;
 
 // APPOfflinePrimitiva - Enum de Primitivas para protocolo APP-APP offline
 
-public enum APPOfflinePrimitiva {
+public enum APPOfflinePrimitiva implements java.io.Serializable {
   O1, // saludo(desafio_primario) prim->sec
   O2, // saludo(desafio_sec, hash(desafio_prim+MasterKey)) sec->prim
   O3, // saludo_ok(id-user, hash(desafio_sec+MasterKey)) prim->sec

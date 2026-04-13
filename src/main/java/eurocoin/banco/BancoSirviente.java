@@ -11,13 +11,12 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
 import eurocoin.common.APPBancoMensaje;
-import eurocoin.common.APPBancoPrimitive;
-import eurocoin.common.BancoInterface;
+import eurocoin.common.APPBancoPrimitiva;
 import eurocoin.common.MalMensajeProtocoloException;
 import eurocoin.util.Digest;
 import eurocoin.util.Registro;
 
-public class BancoSirviente extends Thread implements BancoInterface {
+public class BancoSirviente extends Thread {
 
     private final Socket socketCliente;
     private ObjectOutputStream salida;
@@ -56,14 +55,14 @@ public class BancoSirviente extends Thread implements BancoInterface {
             // A1: Banco -> APP saludo(desafio_banco)
             desafioBanco = Long.toHexString(System.currentTimeMillis());
             System.out.println("[Sirviente] Enviando A1 y desafioBanco: " + desafioBanco);
-            salida.writeObject(APPBancoPrimitive.A1);
+            salida.writeObject(APPBancoPrimitiva.A1);
             salida.writeObject(desafioBanco);
             salida.flush();
 
             // A2: APP -> Banco saludo(desafio_app, id_cliente, hash)
-            APPBancoPrimitive prim = (APPBancoPrimitive) entrada.readObject();
+            APPBancoPrimitiva prim = (APPBancoPrimitiva) entrada.readObject();
 
-            if (prim == APPBancoPrimitive.A2) {
+            if (prim == APPBancoPrimitiva.A2) {
                 String desafioApp = (String) entrada.readObject();
                 String idCliente = (String) entrada.readObject();
                 String hashCliente = (String) entrada.readObject();
@@ -72,9 +71,9 @@ public class BancoSirviente extends Thread implements BancoInterface {
 
                 saludo(idCliente, desafioApp, hashCliente);
 
-                APPBancoPrimitive respuestaApp = (APPBancoPrimitive) entrada.readObject();
+                APPBancoPrimitiva respuestaApp = (APPBancoPrimitiva) entrada.readObject();
 
-                if (respuestaApp == APPBancoPrimitive.A5) {
+                if (respuestaApp == APPBancoPrimitiva.A5) {
                     System.out.println("[Sirviente] ¡Autenticación mutua OK (A5)!");
 
                     // MÓDULO 3: Bucle de operaciones (Recargas y Descargas)
@@ -83,9 +82,9 @@ public class BancoSirviente extends Thread implements BancoInterface {
                         System.out.println("[Sirviente] Esperando operación de la APP...");
                         Object peticion = entrada.readObject();
 
-                        if (peticion instanceof APPBancoPrimitive) {
-                            APPBancoPrimitive primOp = (APPBancoPrimitive) peticion;
-                            if (primOp == APPBancoPrimitive.A7) {
+                        if (peticion instanceof APPBancoPrimitiva) {
+                            APPBancoPrimitiva primOp = (APPBancoPrimitiva) peticion;
+                            if (primOp == APPBancoPrimitiva.A7) {
                                 System.out.println("[Sirviente] La APP ha solicitado desconexión (A7).");
                                 m_final();
                                 operando = false;
@@ -93,17 +92,17 @@ public class BancoSirviente extends Thread implements BancoInterface {
                         } else if (peticion instanceof APPBancoMensaje) {
                             APPBancoMensaje msg = (APPBancoMensaje) peticion;
 
-                            if (msg.getPrimitiva() == APPBancoPrimitive.A9) {
+                            if (msg.getPrimitiva() == APPBancoPrimitiva.A9) {
                                 System.out.println("[Sirviente] Petición de recarga (A9) recibida.");
                                 procesarRecarga(msg.getArg1(), msg.getArg2());
-                            } else if (msg.getPrimitiva() == APPBancoPrimitive.A11) {
+                            } else if (msg.getPrimitiva() == APPBancoPrimitiva.A11) {
                                 System.out.println("[Sirviente] Petición de descarga (A11) recibida.");
                                 procesarDescarga(msg.getArg1(), msg.getArg2());
                             }
                         }
                     }
 
-                } else if (respuestaApp == APPBancoPrimitive.A6) {
+                } else if (respuestaApp == APPBancoPrimitiva.A6) {
                     System.out.println("[Sirviente] La APP rechazó nuestra autenticación (A6).");
                 }
             } else {
@@ -136,7 +135,6 @@ public class BancoSirviente extends Thread implements BancoInterface {
 
     // IMPLEMENTACIÓN DE BancoInterface
 
-    @Override
     public void saludo(String id_cliente, String desafioApp, String hashCliente) {
         try {
             // Evitar conexiones duplicadas del mismo usuario
@@ -169,7 +167,7 @@ public class BancoSirviente extends Thread implements BancoInterface {
                 String hashParaApp = digest.generateHash(desafioApp + secretoBanco);
 
                 System.out.println("[Sirviente] Cliente verificado. Enviando A4.");
-                salida.writeObject(APPBancoPrimitive.A4);
+                salida.writeObject(APPBancoPrimitiva.A4);
                 salida.writeObject(hashParaApp);
                 salida.flush();
                 saludo_ok();
@@ -180,27 +178,24 @@ public class BancoSirviente extends Thread implements BancoInterface {
         }
     }
 
-    @Override
     public void saludo_err() {
         try {
             System.out.println("[Sirviente] Enviando A3 (Error de autenticación).");
-            salida.writeObject(APPBancoPrimitive.A3);
+            salida.writeObject(APPBancoPrimitiva.A3);
             salida.flush();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    @Override
     public void saludo_ok() {
         System.out.println("[Sirviente] Registro interno: saludo_ok procesado.");
     }
 
-    @Override
     public void m_final() {
         try {
             System.out.println("[Sirviente] Recibido A7. Enviando A8 (Final OK).");
-            salida.writeObject(APPBancoPrimitive.A8);
+            salida.writeObject(APPBancoPrimitiva.A8);
             salida.flush();
         } catch (IOException e) {
             e.printStackTrace();
@@ -228,7 +223,7 @@ public class BancoSirviente extends Thread implements BancoInterface {
             String macBanco = digest.generateHash(jsonRecibo + secretoBanco);
 
             // Enviamos la respuesta (A10) a la APP
-            salida.writeObject(new APPBancoMensaje(APPBancoPrimitive.A10, jsonRecibo, macBanco));
+            salida.writeObject(new APPBancoMensaje(APPBancoPrimitiva.A10, jsonRecibo, macBanco));
             salida.flush();
             System.out.println("[Sirviente] Recibo A10 enviado con éxito.");
 
@@ -252,7 +247,7 @@ public class BancoSirviente extends Thread implements BancoInterface {
             String secretoBanco = registroBanco.getValor(idClienteAutenticado + "_SecBanco");
             String macBanco = digest.generateHash(jsonRecibo + secretoBanco);
 
-            salida.writeObject(new APPBancoMensaje(APPBancoPrimitive.A12, jsonRecibo, macBanco));
+            salida.writeObject(new APPBancoMensaje(APPBancoPrimitiva.A12, jsonRecibo, macBanco));
             salida.flush();
 
             System.out.println("[Sirviente] Los ingresos han sido consolidados. Recibo A12 enviado con éxito.");
