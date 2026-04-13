@@ -7,7 +7,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 
 import eurocoin.common.APPBancoMensaje;
-import eurocoin.common.APPBancoPrimitive;
+import eurocoin.common.APPBancoPrimitiva;
 import eurocoin.common.MalMensajeProtocoloException;
 import eurocoin.util.Digest;
 import eurocoin.util.Registro;
@@ -58,8 +58,8 @@ public class TPVOnline {
 
     private boolean autenticar() throws IOException, ClassNotFoundException {
         // Flujo A1 a A6 idéntico al ClienteBanco
-        APPBancoPrimitive prim = (APPBancoPrimitive) entrada.readObject();
-        if (prim != APPBancoPrimitive.A1)
+        APPBancoPrimitiva prim = (APPBancoPrimitiva) entrada.readObject();
+        if (prim != APPBancoPrimitiva.A1)
             return false;
         String desafioBanco = (String) entrada.readObject();
 
@@ -68,25 +68,25 @@ public class TPVOnline {
         String desafioApp = Long.toHexString(System.currentTimeMillis());
         String hashParaBanco = digest.generateHash(desafioBanco + secretoApp);
 
-        salida.writeObject(APPBancoPrimitive.A2);
+        salida.writeObject(APPBancoPrimitiva.A2);
         salida.writeObject(desafioApp);
         salida.writeObject(idCliente);
         salida.writeObject(hashParaBanco);
         salida.flush();
 
-        APPBancoPrimitive respBanco = (APPBancoPrimitive) entrada.readObject();
-        if (respBanco == APPBancoPrimitive.A3)
+        APPBancoPrimitiva respBanco = (APPBancoPrimitiva) entrada.readObject();
+        if (respBanco == APPBancoPrimitiva.A3)
             return false;
 
         String respuestaBanco = (String) entrada.readObject();
         String secretoBanco = registro.getValor("SecBanco");
 
         if (digest.generateHash(desafioApp + secretoBanco).equals(respuestaBanco)) {
-            salida.writeObject(APPBancoPrimitive.A5);
+            salida.writeObject(APPBancoPrimitiva.A5);
             salida.flush();
             return true;
         } else {
-            salida.writeObject(APPBancoPrimitive.A6);
+            salida.writeObject(APPBancoPrimitiva.A6);
             salida.flush();
             return false;
         }
@@ -112,13 +112,13 @@ public class TPVOnline {
 
         // 2. Enviar al Banco
         System.out.println("[TPVOnline] Enviando A11: Descargando " + ingresosOffline + " EC...");
-        salida.writeObject(new APPBancoMensaje(APPBancoPrimitive.A11, jsonDescarga, macDescarga));
+        salida.writeObject(new APPBancoMensaje(APPBancoPrimitiva.A11, jsonDescarga, macDescarga));
         salida.flush();
 
         // 3. Esperar confirmación A12
         APPBancoMensaje respuesta = (APPBancoMensaje) entrada.readObject();
 
-        if (respuesta.getPrimitiva() == APPBancoPrimitive.A12) {
+        if (respuesta.getPrimitiva() == APPBancoPrimitiva.A12) {
             System.out.println("[TPVOnline] ¡El Banco ha aceptado la descarga!");
 
             // 4. Resetear los IngresosEC a "0"
@@ -134,7 +134,7 @@ public class TPVOnline {
     }
 
     private void despedirse() throws IOException, ClassNotFoundException {
-        salida.writeObject(APPBancoPrimitive.A7);
+        salida.writeObject(APPBancoPrimitiva.A7);
         salida.flush();
         entrada.readObject(); // Esperar A8
     }

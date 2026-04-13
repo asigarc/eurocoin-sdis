@@ -6,7 +6,7 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 
 import eurocoin.common.APPBancoMensaje;
-import eurocoin.common.APPBancoPrimitive;
+import eurocoin.common.APPBancoPrimitiva;
 import eurocoin.common.MalMensajeProtocoloException;
 import eurocoin.util.Digest;
 import eurocoin.util.Movimientos;
@@ -119,8 +119,8 @@ public class Wallet {
     private boolean autenticar() throws IOException, ClassNotFoundException {
 
         // A1: Banco -> APP saludo(desafio_banco)
-        APPBancoPrimitive prim = (APPBancoPrimitive) entrada.readObject();
-        if (prim != APPBancoPrimitive.A1) {
+        APPBancoPrimitiva prim = (APPBancoPrimitiva) entrada.readObject();
+        if (prim != APPBancoPrimitiva.A1) {
             System.out.println("[ClienteBanco] Se esperaba A1, llegó: " + prim);
             return false;
         }
@@ -144,23 +144,23 @@ public class Wallet {
         System.out.println("[ClienteBanco] A2 enviado. id=" + idCliente
                 + "  desafioApp=" + desafioApp
                 + "  hash=" + hashParaBanco);
-        salida.writeObject(APPBancoPrimitive.A2);
+        salida.writeObject(APPBancoPrimitiva.A2);
         salida.writeObject(desafioApp);
         salida.writeObject(idCliente);
         salida.writeObject(hashParaBanco);
         salida.flush();
 
         // A3 / A4: respuesta del banco
-        APPBancoPrimitive respBanco = (APPBancoPrimitive) entrada.readObject();
+        APPBancoPrimitiva respBanco = (APPBancoPrimitiva) entrada.readObject();
 
-        if (respBanco == APPBancoPrimitive.A3) {
+        if (respBanco == APPBancoPrimitiva.A3) {
             // El banco no nos reconoce: APP queda comprometida
             System.out.println("[ClienteBanco] A3 recibido: saludo_err. "
                     + "La APP ha sido rechazada por el banco.");
             return false;
         }
 
-        if (respBanco != APPBancoPrimitive.A4) {
+        if (respBanco != APPBancoPrimitiva.A4) {
             System.out.println("[ClienteBanco] Mensaje inesperado: " + respBanco);
             return false;
         }
@@ -176,14 +176,14 @@ public class Wallet {
         if (hashEsperado.equals(respuestaBanco)) {
             // A5: APP -> Banco saludo_ok
             System.out.println("[ClienteBanco] Banco verificado correctamente. Enviando A5: saludo_ok.");
-            salida.writeObject(APPBancoPrimitive.A5);
+            salida.writeObject(APPBancoPrimitiva.A5);
             salida.flush();
             return true; // Autenticación mutua completada con éxito
 
         } else {
             // A6: APP -> Banco saludo_err
             System.out.println("[ClienteBanco] El banco NO superó la verificación. Enviando A6: saludo_err.");
-            salida.writeObject(APPBancoPrimitive.A6);
+            salida.writeObject(APPBancoPrimitiva.A6);
             salida.flush();
             return false;
         }
@@ -210,13 +210,13 @@ public class Wallet {
 
         // 3. Enviamos A9 al banco usando el nuevo "sobre" APPBancoMensaje
         System.out.println("[ClienteBanco] Enviando A9: Solicitando " + cantidadRecarga + " al banco...");
-        salida.writeObject(new APPBancoMensaje(APPBancoPrimitive.A9, jsonRecarga, macRecarga));
+        salida.writeObject(new APPBancoMensaje(APPBancoPrimitiva.A9, jsonRecarga, macRecarga));
         salida.flush();
 
         // 4. Esperamos la confirmación A10
         APPBancoMensaje respuesta = (APPBancoMensaje) entrada.readObject();
 
-        if (respuesta.getPrimitiva() == APPBancoPrimitive.A10) {
+        if (respuesta.getPrimitiva() == APPBancoPrimitiva.A10) {
             String jsonRecibo = respuesta.getArg1();
             String macRecibo = respuesta.getArg2();
 
@@ -249,12 +249,12 @@ public class Wallet {
 
         // A7: APP -> Banco final
         System.out.println("[ClienteBanco] Enviando A7: final.");
-        salida.writeObject(APPBancoPrimitive.A7);
+        salida.writeObject(APPBancoPrimitiva.A7);
         salida.flush();
 
         // A8: Banco -> APP final_ok
-        APPBancoPrimitive respuesta = (APPBancoPrimitive) entrada.readObject();
-        if (respuesta == APPBancoPrimitive.A8) {
+        APPBancoPrimitiva respuesta = (APPBancoPrimitiva) entrada.readObject();
+        if (respuesta == APPBancoPrimitiva.A8) {
             System.out.println("[ClienteBanco] A8 recibido: final_ok. Sesión cerrada correctamente.");
         } else {
             System.out.println("[ClienteBanco] Respuesta inesperada al final: " + respuesta);
