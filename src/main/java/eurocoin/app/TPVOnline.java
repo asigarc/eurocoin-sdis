@@ -5,11 +5,13 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.Scanner;
 
 import eurocoin.common.APPBancoMensaje;
-import eurocoin.common.APPBancoPrimitiva;
+import eurocoin.common.APPBancoPrimitive;
 import eurocoin.common.MalMensajeProtocoloException;
 import eurocoin.util.Digest;
+import eurocoin.util.Movimientos;
 import eurocoin.util.Registro;
 
 public class TPVOnline {
@@ -22,21 +24,35 @@ public class TPVOnline {
     private ObjectInputStream entrada;
     private final Registro registro;
     private final Digest digest;
+    private final Movimientos movimientos;
+    private final Scanner teclado; // Añadido para consistencia con Wallet
 
     public TPVOnline(String archivoRegistro) throws IOException {
+        // Paquete eurocoin.util según P1_tercerModulo.pdf
         this.registro = new Registro(archivoRegistro);
         this.digest = new Digest(registro.getValor("FuncionHash"));
+        this.movimientos = new Movimientos("Movimientos.txt");
+        this.teclado = new Scanner(System.in);
     }
 
     public void iniciar() {
-        if (!conectar())
-            return;
         try {
-            if (autenticar()) {
-                System.out.println("[TPVOnline] Autenticación completada con éxito.");
-                enviarDescarga();
-                despedirse();
+            if (!conectar()) {
+                return;
             }
+
+            if (!autenticar()) {
+                System.out.println("[TPVOnline] Error en la autenticación mutua.");
+                return;
+            }
+
+            System.out.println("[TPVOnline] Autenticación completada con éxito.");
+
+            // El módulo 3 exige operación simple:
+            // una conexión, una autenticación, una operación y una despedida.
+            realizarOperacionOnline();
+            despedirse();
+
         } catch (Exception e) {
             System.out.println("[TPVOnline] Error: " + e.getMessage());
         } finally {
@@ -46,116 +62,153 @@ public class TPVOnline {
 
     private boolean conectar() {
         try {
-            socket = new Socket(HOST_BANCO, PUERTO_BANCO);
-            salida = new ObjectOutputStream(socket.getOutputStream());
-            salida.flush();
-            entrada = new ObjectInputStream(socket.getInputStream());
+            this.socket = new Socket(HOST_BANCO, PUERTO_BANCO);
+            this.salida = new ObjectOutputStream(socket.getOutputStream());
+            this.salida.flush();
+            this.entrada = new ObjectInputStream(socket.getInputStream());
+            System.out.println("[TPVOnline] Conectado al banco.");
             return true;
         } catch (IOException e) {
+            System.out.println("[TPVOnline] Error de conexión: " + e.getMessage());
             return false;
         }
     }
 
-    private boolean autenticar() throws IOException, ClassNotFoundException {
-        // Flujo A1 a A6 idéntico al ClienteBanco
-        APPBancoPrimitiva prim = (APPBancoPrimitiva) entrada.readObject();
-        if (prim != APPBancoPrimitiva.A1)
-            return false;
-        String desafioBanco = (String) entrada.readObject();
+    private boolean autenticar() throws IOException, ClassNotFoundException, MalMensajeProtocoloException {
+        // A1: Recibir desafío
+        Object objA1 = entrada.readObject();
+        if (!(objA1 instanceof APPBancoMensaje)) return false;
 
-        String idCliente = registro.getValor("usuario");
+        APPBancoMensaje msgA1 = (APPBancoMensaje) objA1;
+        if (msgA1.getPrimitiva() != APPBancoPrimitive.A1) return false;
+
+        String desafioBanco = msgA1.getArg1();
         String secretoApp = registro.getValor("SecWallet");
-        String desafioApp = Long.toHexString(System.currentTimeMillis());
-        String hashParaBanco = digest.generateHash(desafioBanco + secretoApp);
+        String respuestaABanco = digest.generateHash(desafioBanco + secretoApp);
 
-        salida.writeObject(APPBancoPrimitiva.A2);
-        salida.writeObject(desafioApp);
-        salida.writeObject(idCliente);
-        salida.writeObject(hashParaBanco);
+        String desafioApp = "DesafTPV-" + System.currentTimeMillis();
+        String idCliente = registro.getValor("usuario");
+
+        // A2: Orden oficial (desafio_app, id_cliente, respuesta)
+        salida.writeObject(new APPBancoMensaje(APPBancoPrimitive.A2, desafioApp, idCliente, respuestaABanco));
         salida.flush();
 
-        APPBancoPrimitiva respBanco = (APPBancoPrimitiva) entrada.readObject();
-        if (respBanco == APPBancoPrimitiva.A3)
-            return false;
+        // A4: Recibir validación
+        Object objA4 = entrada.readObject();
+        if (!(objA4 instanceof APPBancoMensaje)) return false;
 
-        String respuestaBanco = (String) entrada.readObject();
+        APPBancoMensaje msgA4 = (APPBancoMensaje) objA4;
+        if (msgA4.getPrimitiva() != APPBancoPrimitive.A4) return false;
+
         String secretoBanco = registro.getValor("SecBanco");
+        String respuestaEsperada = digest.generateHash(desafioApp + secretoBanco);
 
-        if (digest.generateHash(desafioApp + secretoBanco).equals(respuestaBanco)) {
-            salida.writeObject(APPBancoPrimitiva.A5);
+        if (respuestaEsperada.equals(msgA4.getArg1())) {
+            salida.writeObject(new APPBancoMensaje(APPBancoPrimitive.A5));
             salida.flush();
             return true;
         } else {
-            salida.writeObject(APPBancoPrimitiva.A6);
+            salida.writeObject(new APPBancoMensaje(APPBancoPrimitive.A6));
             salida.flush();
             return false;
         }
     }
 
-    private void enviarDescarga() throws IOException, ClassNotFoundException, MalMensajeProtocoloException {
-        System.out.println("--------------------------------------------------");
-        System.out.println(" Iniciando descarga de ingresos al Banco...");
+    private void realizarOperacionOnline() throws Exception {
+        System.out.println("\n--- OPERACIÓN ONLINE ÚNICA TPV ---");
+        System.out.println("1. Descargar ingresos al banco (A11)");
+        System.out.println("2. Salir sin operar");
+        System.out.print("Seleccione: ");
 
-        String idCliente = registro.getValor("usuario");
-        String ingresosOffline = registro.getValor("IngresosEC");
+        String op = teclado.nextLine();
 
-        if (ingresosOffline == null || ingresosOffline.equals("0")) {
-            System.out.println("[TPVOnline] No hay ingresos offline que descargar.");
+        if ("1".equals(op)) {
+            enviarDescarga();
+        } else if ("2".equals(op)) {
+            System.out.println("[TPVOnline] No se realizará ninguna operación.");
+        } else {
+            System.out.println("[TPVOnline] Opción no válida. Se cerrará la sesión.");
+        }
+    }
+
+    private void enviarDescarga() throws Exception {
+        System.out.println("[TPVOnline] Iniciando descarga de ingresos al banco...");
+
+        String user = registro.getValor("usuario");
+        String ingresos = registro.getValor("IngresosEC");
+
+        if (ingresos == null || ingresos.trim().isEmpty()) {
+            ingresos = "0.0";
+        }
+
+        // JSON Módulo 3: titular y cantidad
+        String jsonDescarga = "{ \"op\": \"descarga\", \"titular\": \"" + user + "\", \"cantidad\": \"" + ingresos + "\"}";
+        String macDescarga = digest.generateHash(jsonDescarga + registro.getValor("SecWallet"));
+
+        // Guardar rastro de la transacción (Fiel a Autenticacion.pdf)
+        movimientos.guardarMovimiento(jsonDescarga, macDescarga);
+
+        System.out.println("[TPVOnline] Enviando A11 (descarga)...");
+        salida.writeObject(new APPBancoMensaje(APPBancoPrimitive.A11, jsonDescarga, macDescarga));
+        salida.flush();
+
+        Object objResp = entrada.readObject();
+        if (!(objResp instanceof APPBancoMensaje)) {
+            System.out.println("[TPVOnline] Respuesta inválida.");
             return;
         }
 
-        // 1. Construir JSON A11
-        String jsonDescarga = "{\"op\": \"descarga\", \"titular\": \"" + idCliente + "\", \"cantidad\": \""
-                + ingresosOffline + "\"}";
-        String secWallet = registro.getValor("SecWallet");
-        String macDescarga = digest.generateHash(jsonDescarga + secWallet);
+        APPBancoMensaje respuesta = (APPBancoMensaje) objResp;
 
-        // 2. Enviar al Banco
-        System.out.println("[TPVOnline] Enviando A11: Descargando " + ingresosOffline + " EC...");
-        salida.writeObject(new APPBancoMensaje(APPBancoPrimitiva.A11, jsonDescarga, macDescarga));
-        salida.flush();
+        if (respuesta.getPrimitiva() == APPBancoPrimitive.A12) {
+            String jsonRecibo = respuesta.getArg1();
+            String macBanco = respuesta.getArg2();
 
-        // 3. Esperar confirmación A12
-        APPBancoMensaje respuesta = (APPBancoMensaje) entrada.readObject();
+            String secretoBanco = registro.getValor("SecBanco");
+            if (digest.generateHash(jsonRecibo + secretoBanco).equals(macBanco)) {
+                System.out.println("[TPVOnline] Descarga aceptada y firmada por el banco.");
 
-        if (respuesta.getPrimitiva() == APPBancoPrimitiva.A12) {
-            System.out.println("[TPVOnline] ¡El Banco ha aceptado la descarga!");
+                movimientos.guardarMovimiento(jsonRecibo, macBanco);
+                registro.setValor("IngresosEC", "0.0");
 
-            // 4. Resetear los IngresosEC a "0"
-            registro.setValor("IngresosEC", "0");
-
-            // 5. Vaciar el archivo Movimientos.txt (consolidación)
-            new PrintWriter("Movimientos.txt").close();
-
-            System.out.println("[TPVOnline] Movimientos offline limpiados y consolidados correctamente.");
-        } else {
-            System.out.println("[TPVOnline] Error en la descarga (No llegó A12).");
+                // Consolidación física: vaciado de Movimientos.txt (P1_tercerModulo.pdf)
+                try (PrintWriter writer = new PrintWriter("Movimientos.txt")) {
+                    writer.print("");
+                }
+                System.out.println("[TPVOnline] Movimientos consolidados y archivo limpiado.");
+            } else {
+                System.out.println("[TPVOnline] ERROR: Firma del banco inválida.");
+            }
+        } else if (respuesta.getPrimitiva() == APPBancoPrimitive.A3) {
+            System.out.println("[TPVOnline] Operación rechazada por el banco.");
         }
     }
 
-    private void despedirse() throws IOException, ClassNotFoundException {
-        salida.writeObject(APPBancoPrimitiva.A7);
+    private void despedirse() throws IOException, ClassNotFoundException, MalMensajeProtocoloException {
+        System.out.println("[TPVOnline] Enviando A7 (final)...");
+        salida.writeObject(new APPBancoMensaje(APPBancoPrimitive.A7));
         salida.flush();
-        entrada.readObject(); // Esperar A8
+
+        Object objA8 = entrada.readObject();
+        if (objA8 instanceof APPBancoMensaje && ((APPBancoMensaje) objA8).getPrimitiva() == APPBancoPrimitive.A8) {
+            System.out.println("[TPVOnline] A8 recibido. Sesión finalizada.");
+        }
     }
 
     private void cerrar() {
         try {
-            if (salida != null)
-                salida.close();
-            if (entrada != null)
-                entrada.close();
-            if (socket != null)
-                socket.close();
-        } catch (IOException e) {
-        }
+            if (entrada != null) entrada.close();
+            if (salida != null) salida.close();
+            if (socket != null) socket.close();
+        } catch (IOException e) { }
     }
 
     public static void main(String[] args) {
         try {
-            new TPVOnline("Registro.json").iniciar();
-        } catch (Exception e) {
-            e.printStackTrace();
+            TPVOnline tpv = new TPVOnline("Registro.json");
+            tpv.iniciar();
+        } catch (IOException e) {
+            System.out.println("[TPVOnline] Error fatal: " + e.getMessage());
         }
     }
 }

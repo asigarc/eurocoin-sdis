@@ -1,7 +1,6 @@
 package snippets;
 
 
-// función de hash criptografica
 import eurocoin.util.Digest;
 import eurocoin.util.Registro;
 

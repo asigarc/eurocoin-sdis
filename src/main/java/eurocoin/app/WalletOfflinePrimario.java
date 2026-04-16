@@ -3,9 +3,14 @@ package eurocoin.app;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.Map;
+import java.util.Scanner;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import eurocoin.common.APPOfflineMensaje;
-import eurocoin.common.APPOfflinePrimitiva;
+import eurocoin.common.APPOfflinePrimitive;
 import eurocoin.util.Digest;
 import eurocoin.util.Movimientos;
 import eurocoin.util.Registro;
@@ -16,117 +21,120 @@ public class WalletOfflinePrimario {
         String host = "localhost";
         int puerto = 3000;
 
-        try (Socket socket = new Socket(host, puerto)) {
-            System.out.println("[WalletPrimario] Conectado al Secundario en " + host + ":" + puerto);
+        try (Socket socket = new Socket(host, puerto);
+             ObjectOutputStream salida = new ObjectOutputStream(socket.getOutputStream());
+             ObjectInputStream entrada = new ObjectInputStream(socket.getInputStream())) {
 
-            ObjectOutputStream salida = new ObjectOutputStream(socket.getOutputStream());
             salida.flush();
-            ObjectInputStream entrada = new ObjectInputStream(socket.getInputStream());
 
-            // PREPARACIÓN
             Registro registro = new Registro("Registro.json");
             Digest digest = new Digest(registro.getValor("FuncionHash"));
             Movimientos movimientos = new Movimientos("Movimientos.txt");
+            Gson gson = new Gson();
+
             String masterKey = registro.getValor("Masterkey");
+            String secWallet = registro.getValor("SecWallet");
             String miNombre = registro.getValor("usuario");
-            String miSecreto = registro.getValor("SecWallet");
 
-            // FASE 2: AUTENTICACIÓN OFFLINE
-            System.out.println("[WalletPrimario] Iniciando autenticación offline...");
+            // =========================================================
+            // FASE 1: HANDSHAKE OFFLINE (O1-O4) -> MASTERKEY
+            // =========================================================
+            //
 
-            String desafioPrim = Long.toHexString(System.currentTimeMillis());
-            salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O1, desafioPrim));
+            String desafP = "DesafP-" + System.currentTimeMillis();
+            salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitive.O1, desafP));
             salida.flush();
 
-            APPOfflineMensaje msgO2 = (APPOfflineMensaje) entrada.readObject();
-            if (msgO2.getPrimitiva() == APPOfflinePrimitiva.O2) {
-                String desafioSec = msgO2.getArg1();
-                String hashRecibido = msgO2.getArg2();
-                String hashEsperado = digest.generateHash(desafioPrim + masterKey);
+            Object objO2 = entrada.readObject();
+            if (!(objO2 instanceof APPOfflineMensaje) || ((APPOfflineMensaje)objO2).getPrimitiva() != APPOfflinePrimitive.O2) {
+                System.out.println("[Primario] Error: Se esperaba O2.");
+                return;
+            }
 
-                if (!hashEsperado.equals(hashRecibido)) {
-                    System.out.println("[WalletPrimario] Error grave de autenticación.");
-                    return;
-                }
+            APPOfflineMensaje msgO2 = (APPOfflineMensaje) objO2;
+            if (!digest.generateHash(desafP + masterKey).equals(msgO2.getArg2())) {
+                System.out.println("[Primario] Seguridad: El dispositivo remoto no superó la validación MasterKey.");
+                return;
+            }
 
-                String hashParaSec = digest.generateHash(desafioSec + masterKey);
-                salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O3, miNombre, hashParaSec));
-                salida.flush();
+            String desafS = msgO2.getArg1();
+            salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitive.O3, miNombre, digest.generateHash(desafS + masterKey)));
+            salida.flush();
 
-                APPOfflineMensaje msgO4 = (APPOfflineMensaje) entrada.readObject();
-                if (msgO4.getPrimitiva() == APPOfflinePrimitiva.O4) {
-                    String nombreSecundario = msgO4.getArg1();
-                    System.out
-                            .println("[WalletPrimario] ¡Autenticación completada! Secundario es: " + nombreSecundario);
+            Object objO4 = entrada.readObject();
+            if (!(objO4 instanceof APPOfflineMensaje) || ((APPOfflineMensaje)objO4).getPrimitiva() != APPOfflinePrimitive.O4) {
+                System.out.println("[Primario] Error: Se esperaba O4.");
+                return;
+            }
+            String nombreSec = ((APPOfflineMensaje)objO4).getArg1();
 
-                    // FASE 3: PAGO
-                    System.out.println("[WalletPrimario] Iniciando transacción (O5)...");
-                    java.util.Scanner escaner = new java.util.Scanner(System.in);
-                    System.out.print(">>> Introduce la cantidad de EuroCoins a enviar: ");
-                    String cantidad = escaner.nextLine();
+            // =========================================================
+            // FASE 2: OPERACIÓN OFFLINE (O5 -> O6) -> SECWALLET
+            // =========================================================
 
-                    double saldoDisponible = Double.parseDouble(registro.getValor("FondosEC"));
-                    double cantidadDeseada = Double.parseDouble(cantidad);
+            Scanner sc = new Scanner(System.in);
+            System.out.print(">>> Cantidad a enviar a " + nombreSec + ": ");
+            String cantEnviada = sc.nextLine();
 
-                    if (cantidadDeseada > saldoDisponible) {
-                        System.out.println("[WalletPrimario] ERROR: Saldo insuficiente. Tienes " + saldoDisponible
-                                + " EC, pero intentas enviar " + cantidadDeseada + " EC.");
+            String fondosStr = registro.getValor("FondosEC");
+            double saldoActual = (fondosStr == null || fondosStr.trim().isEmpty()) ? 0.0 : Double.parseDouble(fondosStr);
+            double cantidadDouble = Double.parseDouble(cantEnviada);
 
-                        // Enviamos O9 para cerrar la conexión amistosamente ya que no podemos pagar
-                        salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O9));
-                        salida.flush();
-                        entrada.readObject(); // Esperar el O10
-                        return; // Cortamos la ejecución
-                    }
+            if (saldoActual < cantidadDouble) {
+                System.out.println("[Primario] Abortando: Fondos insuficientes.");
+                return;
+            }
 
-                    String jsonIngreso = "{ \"op\": \"ingreso\", \"de\": \"" + miNombre + "\", \"a\": \""
-                            + nombreSecundario + "\", \"cantidad\": \"" + cantidad + "\"}";
-                    String macIngreso = digest.generateHash(jsonIngreso + miSecreto);
+            // O5: Envío de ingreso firmado con SecWallet privado
+            String jsonIng = "{ \"op\": \"ingreso\", \"de\": \"" + miNombre + "\", \"a\": \"" + nombreSec + "\", \"cantidad\": \"" + cantEnviada + "\"}";
+            String macIng = digest.generateHash(jsonIng + secWallet);
 
-                    movimientos.guardarMovimiento(jsonIngreso, macIngreso);
+            movimientos.guardarMovimiento(jsonIng, macIng);
+            salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitive.O5, jsonIng, macIng));
+            salida.flush();
 
-                    salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O5, jsonIngreso, macIngreso));
-                    salida.flush();
+            // Recibir O6 (Recibo)
+            Object objO6 = entrada.readObject();
+            if (!(objO6 instanceof APPOfflineMensaje) || ((APPOfflineMensaje)objO6).getPrimitiva() != APPOfflinePrimitive.O6) {
+                System.out.println("[Primario] Error: No se recibió un recibo (O6) válido.");
+                return;
+            }
 
-                    APPOfflineMensaje msgO6 = (APPOfflineMensaje) entrada.readObject();
-                    if (msgO6.getPrimitiva() == APPOfflinePrimitiva.O6) {
-                        System.out.println("[WalletPrimario] Recibido recibo (O6) del Secundario. Guardando...");
+            APPOfflineMensaje msgO6 = (APPOfflineMensaje) objO6;
+            String jsonRecibo = msgO6.getArg1();
 
-                        movimientos.guardarMovimiento(msgO6.getArg1(), msgO6.getArg2());
-                        System.out.println("[WalletPrimario] ¡Pago completado y guardado con éxito!");
+            // VALIDACIÓN DE COHERENCIA DEL RECIBO
+            Map<String, String> datosRecibo = gson.fromJson(jsonRecibo, new TypeToken<Map<String, String>>(){}.getType());
+            String cantidadConfirmada = datosRecibo.get("cantidad");
+            String deConfirmado = datosRecibo.get("de");
+            String aConfirmado = datosRecibo.get("a");
 
-                        try {
-                            Thread.sleep(1000);
-                        } catch (InterruptedException e) {
-                        }
+            if (cantidadConfirmada == null || !cantEnviada.equals(cantidadConfirmada) ||
+                deConfirmado == null || !miNombre.equals(deConfirmado) ||
+                aConfirmado == null || !nombreSec.equals(aConfirmado)) {
+                System.out.println("[Primario] ERROR: El recibo no es coherente con la transacción enviada.");
+                return;
+            }
 
-                        // FASE 4: ACTUALIZACIÓN DE SALDO Y DESPEDIDA
-                        System.out.println("[WalletPrimario] Restando " + cantidad + " EuroCoins de FondosEC...");
-                        double fondosActuales = Double.parseDouble(registro.getValor("FondosEC"));
-                        registro.setValor("FondosEC", String.valueOf(fondosActuales - Double.parseDouble(cantidad)));
+            // Almacenar evidencia (notario) y consolidar saldo local
+            movimientos.guardarMovimiento(jsonRecibo, msgO6.getArg2());
+            registro.setValor("FondosEC", String.valueOf(saldoActual - cantidadDouble));
+            System.out.println("[Primario] Transacción completada y recibo guardado.");
 
-                        System.out.println("[WalletPrimario] Enviando O9 (final)...");
-                        salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O9));
-                        salida.flush();
+            // =========================================================
+            // FASE 3: CIERRE (O9-O10)
+            // =========================================================
 
-                        APPOfflineMensaje msgO10 = (APPOfflineMensaje) entrada.readObject();
-                        if (msgO10.getPrimitiva() == APPOfflinePrimitiva.O10) {
-                            System.out.println(
-                                    "[WalletPrimario] Recibido O10 (final_ok). Desconexión segura completada.");
-                        }
+            salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitive.O9));
+            salida.flush();
 
-                    } else {
-                        System.out.println("[WalletPrimario] Se esperaba O6.");
-                    }
-                } else {
-                    System.out.println("[WalletPrimario] Se esperaba O4.");
-                }
-            } else {
-                System.out.println("[WalletPrimario] Se esperaba O2.");
+            Object objO10 = entrada.readObject();
+            if (objO10 instanceof APPOfflineMensaje && ((APPOfflineMensaje)objO10).getPrimitiva() == APPOfflinePrimitive.O10) {
+                System.out.println("[Primario] Sesión finalizada con éxito.");
             }
 
         } catch (Exception e) {
-            System.err.println("[WalletPrimario] Error: " + e.getMessage());
+            System.err.println("[Primario] Error: " + e.getMessage());
         }
     }
 }

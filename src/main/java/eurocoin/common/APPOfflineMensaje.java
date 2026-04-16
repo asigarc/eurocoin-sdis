@@ -3,14 +3,14 @@ package eurocoin.common;
 // APPOfflineMensaje - Mensaje del Protocolo APP-APP offline
 
 public class APPOfflineMensaje implements java.io.Serializable {
-  private final APPOfflinePrimitiva primitiva;
+  private final APPOfflinePrimitive primitiva;
   private final String arg1;
   private final String arg2;
 
   // Constructor 0 args para O9 y O10
-  public APPOfflineMensaje(APPOfflinePrimitiva p)
+  public APPOfflineMensaje(APPOfflinePrimitive p)
       throws MalMensajeProtocoloException {
-    if (p == APPOfflinePrimitiva.O9 || p == APPOfflinePrimitiva.O10) {
+    if (p == APPOfflinePrimitive.O9 || p == APPOfflinePrimitive.O10) {
       this.primitiva = p;
       this.arg1 = this.arg2 = null;
     } else
@@ -18,9 +18,9 @@ public class APPOfflineMensaje implements java.io.Serializable {
   }
 
   // Constructor 1 args para O1,O4
-  public APPOfflineMensaje(APPOfflinePrimitiva p, String arg1)
+  public APPOfflineMensaje(APPOfflinePrimitive p, String arg1)
       throws MalMensajeProtocoloException {
-    if (p == APPOfflinePrimitiva.O1 || p == APPOfflinePrimitiva.O4) {
+    if (p == APPOfflinePrimitive.O1 || p == APPOfflinePrimitive.O4) {
       this.arg1 = arg1;
       this.arg2 = null;
     } else
@@ -29,11 +29,11 @@ public class APPOfflineMensaje implements java.io.Serializable {
   }
 
   // Constructor 2 args para O2, O3, O5, O6, O7, O8
-  public APPOfflineMensaje(APPOfflinePrimitiva p, String arg1, String arg2)
+  public APPOfflineMensaje(APPOfflinePrimitive p, String arg1, String arg2)
       throws MalMensajeProtocoloException {
-    if (p == APPOfflinePrimitiva.O2 || p == APPOfflinePrimitiva.O3 ||
-        p == APPOfflinePrimitiva.O5 || p == APPOfflinePrimitiva.O6 ||
-        p == APPOfflinePrimitiva.O7 || p == APPOfflinePrimitiva.O8) {
+    if (p == APPOfflinePrimitive.O2 || p == APPOfflinePrimitive.O3 ||
+        p == APPOfflinePrimitive.O5 || p == APPOfflinePrimitive.O6 ||
+        p == APPOfflinePrimitive.O7 || p == APPOfflinePrimitive.O8) {
       this.arg1 = arg1;
       this.arg2 = arg2;
     } else
@@ -41,7 +41,7 @@ public class APPOfflineMensaje implements java.io.Serializable {
     this.primitiva = p;
   }
 
-  public APPOfflinePrimitiva getPrimitiva() {
+  public APPOfflinePrimitive getPrimitiva() {
     return this.primitiva;
   }
 

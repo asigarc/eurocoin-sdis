@@ -1,6 +1,22 @@
 {
-  "PedroLuis_secwallet": "Secreto-PedroLuis",
-  "PedroLuis_SecBanco": "Secreto-BancoBob",
-  "TiendaPaco_secwallet": "Secreto-Paco",
-  "TiendaPaco_SecBanco": "Secreto-BancoPaco"
+  "BancoBob": {
+    "MasterKey": "9942koofffo",
+    "SecWallet": "Secreto-PedroLuis",
+    "SecBanco": "Secreto-BancoBob",
+    "FondosEC": "50000"
+  },
+  "PedroLuis": {
+    "MasterKey": "9942koofffo",
+    "SecWallet": "Secreto-PedroLuis",
+    "SecBanco": "Secreto-BancoBob",
+    "Saldo": "1500",
+    "FondosEC": "50"
+  },
+  "AngelAntonio": {
+    "MasterKey": "9942koofffo",
+    "SecWallet": "Secreto-AngelAntonio",
+    "SecBanco": "Secreto-BancoBob",
+    "Saldo": "1500",
+    "FondosEC": "500"
+  }
 }

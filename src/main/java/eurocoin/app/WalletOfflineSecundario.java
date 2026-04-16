@@ -1,6 +1,5 @@
 package eurocoin.app;
 
-import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
@@ -8,11 +7,10 @@ import java.net.Socket;
 import java.util.Map;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
 
 import eurocoin.common.APPOfflineMensaje;
-import eurocoin.common.APPOfflinePrimitiva;
-import eurocoin.common.MalMensajeProtocoloException;
+import eurocoin.common.APPOfflinePrimitive;
 import eurocoin.util.Digest;
 import eurocoin.util.Movimientos;
 import eurocoin.util.Registro;
@@ -23,152 +21,204 @@ public class WalletOfflineSecundario {
         int puerto = 3000;
 
         try (ServerSocket serverSocket = new ServerSocket(puerto)) {
-            System.out.println("[WalletSecundario] Iniciado. Esperando conexiones en el puerto " + puerto + "...");
+            System.out.println("[Secundario] Servidor offline activo en puerto " + puerto);
 
             while (true) {
                 Socket socketPrimario = serverSocket.accept();
-                System.out.println("[WalletSecundario] ¡Primario conectado! IP: " + socketPrimario.getInetAddress());
                 atenderPrimario(socketPrimario);
             }
         } catch (Exception e) {
-            System.err.println("[WalletSecundario] Error crítico: " + e.getMessage());
+            System.err.println("[Secundario] Error en ServerSocket: " + e.getMessage());
         }
     }
 
     private static void atenderPrimario(Socket socket) {
-        try {
-            ObjectOutputStream salida = new ObjectOutputStream(socket.getOutputStream());
+        try (ObjectOutputStream salida = new ObjectOutputStream(socket.getOutputStream());
+             ObjectInputStream entrada = new ObjectInputStream(socket.getInputStream())) {
+
             salida.flush();
-            ObjectInputStream entrada = new ObjectInputStream(socket.getInputStream());
 
             Registro registro = new Registro("Registro.json");
             Digest digest = new Digest(registro.getValor("FuncionHash"));
             Movimientos movimientos = new Movimientos("Movimientos.txt");
+            Gson gson = new Gson();
+
             String masterKey = registro.getValor("Masterkey");
+            String secWallet = registro.getValor("SecWallet");
             String miNombre = registro.getValor("usuario");
-            String miSecreto = registro.getValor("SecWallet");
-            Gson gson = new Gson(); // Para parsear los JSON recibidos
 
-            System.out.println("[WalletSecundario] Listo para iniciar la autenticación offline...");
+            // =========================================================
+            // FASE 1: AUTENTICACIÓN OFFLINE (O1-O4) -> MASTERKEY
+            // =========================================================
 
-            APPOfflineMensaje msgO1 = (APPOfflineMensaje) entrada.readObject();
-            if (msgO1.getPrimitiva() == APPOfflinePrimitiva.O1) {
-                String desafioPrim = msgO1.getArg1();
+            Object objO1 = entrada.readObject();
+            if (!(objO1 instanceof APPOfflineMensaje)) {
+                System.out.println("[Secundario] Error: Se esperaba APPOfflineMensaje en O1.");
+                return;
+            }
 
-                String desafioSec = Long.toHexString(System.currentTimeMillis() + 1000);
-                String hashParaPrim = digest.generateHash(desafioPrim + masterKey);
+            APPOfflineMensaje msgO1 = (APPOfflineMensaje) objO1;
+            if (msgO1.getPrimitiva() != APPOfflinePrimitive.O1) {
+                System.out.println("[Secundario] Error: Se esperaba O1.");
+                return;
+            }
 
-                salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O2, desafioSec, hashParaPrim));
+            String desafioPrim = msgO1.getArg1();
+            String desafioSec = "DesafSec-" + System.currentTimeMillis();
+
+            String hashParaPrim = digest.generateHash(desafioPrim + masterKey);
+            salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitive.O2, desafioSec, hashParaPrim));
+            salida.flush();
+
+            Object objO3 = entrada.readObject();
+            if (!(objO3 instanceof APPOfflineMensaje)) {
+                System.out.println("[Secundario] Error: Se esperaba APPOfflineMensaje en O3.");
+                return;
+            }
+
+            APPOfflineMensaje msgO3 = (APPOfflineMensaje) objO3;
+            if (msgO3.getPrimitiva() != APPOfflinePrimitive.O3) {
+                System.out.println("[Secundario] Error: Se esperaba O3.");
+                return;
+            }
+
+            String hashEsperado = digest.generateHash(desafioSec + masterKey);
+            if (!hashEsperado.equals(msgO3.getArg2())) {
+                System.out.println("[Secundario] Error: Fallo de autenticación con MasterKey.");
+                return;
+            }
+
+            String nombrePrim = msgO3.getArg1();
+
+            salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitive.O4, miNombre));
+            salida.flush();
+
+            // =========================================================
+            // FASE 2: OPERACIÓN OFFLINE (O5/O7 -> O6/O8)
+            // =========================================================
+
+            Object objTx = entrada.readObject();
+            if (!(objTx instanceof APPOfflineMensaje)) {
+                System.out.println("[Secundario] Error: Se esperaba APPOfflineMensaje en fase de operación.");
+                return;
+            }
+
+            APPOfflineMensaje msgTx = (APPOfflineMensaje) objTx;
+
+            if (msgTx.getPrimitiva() == APPOfflinePrimitive.O5) {
+                // -----------------------------------------------------
+                // CASO O5: INGRESO -> O6 RECIBO
+                // -----------------------------------------------------
+                String jsonIngreso = msgTx.getArg1();
+                String macIngreso = msgTx.getArg2();
+
+                /*
+                 * Nota de diseño:
+                 * El receptor no dispone del secreto privado del emisor, por lo que
+                 * almacena (documento, firma) como evidencia para posterior consolidación.
+                 */
+                movimientos.guardarMovimiento(jsonIngreso, macIngreso);
+
+                Map<String, String> datos = gson.fromJson(
+                        jsonIngreso,
+                        new TypeToken<Map<String, String>>() {}.getType());
+
+                String cantidad = datos.get("cantidad");
+
+                String jsonRecibo = "{ \"op\": \"recibo\", \"de\": \"" + nombrePrim
+                        + "\", \"a\": \"" + miNombre
+                        + "\", \"cantidad\": \"" + cantidad + "\"}";
+                String macRecibo = digest.generateHash(jsonRecibo + secWallet);
+
+                movimientos.guardarMovimiento(jsonRecibo, macRecibo);
+                salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitive.O6, jsonRecibo, macRecibo));
                 salida.flush();
 
-                APPOfflineMensaje msgO3 = (APPOfflineMensaje) entrada.readObject();
-                if (msgO3.getPrimitiva() == APPOfflinePrimitiva.O3) {
-                    String nombrePrim = msgO3.getArg1();
-                    String hashRecibido = msgO3.getArg2();
-                    String hashEsperado = digest.generateHash(desafioSec + masterKey);
+                String ingresosStr = registro.getValor("IngresosEC");
+                double ingresosActuales = (ingresosStr == null || ingresosStr.trim().isEmpty())
+                        ? 0.0
+                        : Double.parseDouble(ingresosStr);
 
-                    if (!hashEsperado.equals(hashRecibido)) {
-                        System.out.println("[WalletSecundario] Error grave de autenticación.");
-                        return;
-                    }
+                double total = ingresosActuales + Double.parseDouble(cantidad);
+                registro.setValor("IngresosEC", String.valueOf(total));
 
-                    salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O4, miNombre));
-                    salida.flush();
-                    System.out.println("[WalletSecundario] ¡Autenticación completada con éxito!");
+            } else if (msgTx.getPrimitiva() == APPOfflinePrimitive.O7) {
+                // -----------------------------------------------------
+                // CASO O7: FACTURA -> O8 PAGO
+                // -----------------------------------------------------
+                String jsonFactura = msgTx.getArg1();
+                String macFactura = msgTx.getArg2();
 
-                    System.out.println("[WalletSecundario] Esperando transacción (O5 ingreso o O7 factura)...");
-                    APPOfflineMensaje msgTx = (APPOfflineMensaje) entrada.readObject();
+                /*
+                 * Igual que en O5, se conserva la evidencia (documento, firma)
+                 * para consolidación posterior.
+                 */
+                movimientos.guardarMovimiento(jsonFactura, macFactura);
 
-                    // CASO 1: OTRO WALLET NOS MANDA DINERO (O5)
+                Map<String, String> datos = gson.fromJson(
+                        jsonFactura,
+                        new TypeToken<Map<String, String>>() {}.getType());
 
-                    if (msgTx.getPrimitiva() == APPOfflinePrimitiva.O5) {
-                        // Extraemos la cantidad que nos han enviado dinámicamente
-                        Map<String, String> datosIngreso = gson.fromJson(msgTx.getArg1(), Map.class);
-                        String cantidadRecibida = datosIngreso.get("cantidad");
+                String cantidadStr = datos.get("cantidad");
+                String idFact = datos.get("idFactura");
 
-                        System.out.println("[WalletSecundario] Ingreso recibido (O5) por valor de " + cantidadRecibida
-                                + " EC. Guardando...");
-                        movimientos.guardarMovimiento(msgTx.getArg1(), msgTx.getArg2());
+                double cantidad = Double.parseDouble(cantidadStr);
 
-                        String jsonRecibo = "{ \"op\": \"recibo\", \"de\": \"" + nombrePrim + "\", \"a\": \"" + miNombre
-                                + "\", \"cantidad\": \"" + cantidadRecibida + "\"}";
-                        String macRecibo = digest.generateHash(jsonRecibo + miSecreto);
+                String fondosStr = registro.getValor("FondosEC");
+                double saldoActual = (fondosStr == null || fondosStr.trim().isEmpty())
+                        ? 0.0
+                        : Double.parseDouble(fondosStr);
 
-                        movimientos.guardarMovimiento(jsonRecibo, macRecibo);
-                        salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O6, jsonRecibo, macRecibo));
-                        salida.flush();
-
-                        // Actualizamos nuestros ingresos
-                        double ingresosActuales = Double.parseDouble(registro.getValor("IngresosEC"));
-                        registro.setValor("IngresosEC",
-                                String.valueOf(ingresosActuales + Double.parseDouble(cantidadRecibida)));
-
-                        APPOfflineMensaje msgO9 = (APPOfflineMensaje) entrada.readObject();
-                        if (msgO9.getPrimitiva() == APPOfflinePrimitiva.O9) {
-                            salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O10));
-                            salida.flush();
-                            System.out.println("[WalletSecundario] Desconexión segura completada.");
-                        }
-
-                        // CASO 2: UN TPV NOS MANDA UNA FACTURA PARA QUE PAGUEMOS (O7)
-
-                    } else if (msgTx.getPrimitiva() == APPOfflinePrimitiva.O7) {
-                        // Extraemos la cantidad que nos piden y el ID de la factura
-                        Map<String, String> datosFactura = gson.fromJson(msgTx.getArg1(), Map.class);
-                        String cantidadAPagar = datosFactura.get("cantidad");
-                        String idFactura = datosFactura.get("idFactura");
-
-                        System.out.println("[WalletSecundario] Factura " + idFactura + " recibida (O7) por valor de "
-                                + cantidadAPagar + " EC. Procesando pago...");
-
-                        double saldoDisponible = Double.parseDouble(registro.getValor("FondosEC"));
-                        double cantidadNecesaria = Double.parseDouble(cantidadAPagar);
-
-                        if (cantidadNecesaria > saldoDisponible) {
-                            System.out.println("[WalletSecundario] ERROR: Saldo insuficiente para pagar la factura.");
-
-                            salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O9));
-                            salida.flush();
-                            return; // Cortamos y no pagamos nada
-                        }
-
-                        movimientos.guardarMovimiento(msgTx.getArg1(), msgTx.getArg2());
-
-                        // Generamos el pago (O8) usando los datos dinámicos
-                        String jsonPago = "{ \"op\": \"pago\", \"de\": \"" + nombrePrim + "\", \"a\": \"" + miNombre
-                                + "\", \"cantidad\": \"" + cantidadAPagar + "\", \"idFactura\": \"" + idFactura + "\"}";
-                        String macPago = digest.generateHash(jsonPago + miSecreto);
-
-                        movimientos.guardarMovimiento(jsonPago, macPago);
-                        salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O8, jsonPago, macPago));
-                        salida.flush();
-
-                        // Descontamos el saldo
-                        double fondosActuales = Double.parseDouble(registro.getValor("FondosEC"));
-                        registro.setValor("FondosEC",
-                                String.valueOf(fondosActuales - Double.parseDouble(cantidadAPagar)));
-
-                        APPOfflineMensaje msgO9 = (APPOfflineMensaje) entrada.readObject();
-                        if (msgO9.getPrimitiva() == APPOfflinePrimitiva.O9) {
-                            salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitiva.O10));
-                            salida.flush();
-                            System.out.println("[WalletSecundario] Pago al TPV y desconexión completada.");
-                        }
-                    } else {
-                        System.out.println("[WalletSecundario] Mensaje inesperado. Se esperaba O5 o O7.");
-                    }
+                if (saldoActual < cantidad) {
+                    System.out.println("[Secundario] Error: Saldo insuficiente.");
+                    return;
                 }
+
+                String jsonPago = "{ \"op\": \"pago\", \"de\": \"" + miNombre
+                        + "\", \"a\": \"" + nombrePrim
+                        + "\", \"cantidad\": \"" + cantidadStr
+                        + "\", \"idFactura\": \"" + idFact + "\"}";
+                String macPago = digest.generateHash(jsonPago + secWallet);
+
+                movimientos.guardarMovimiento(jsonPago, macPago);
+                salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitive.O8, jsonPago, macPago));
+                salida.flush();
+
+                registro.setValor("FondosEC", String.valueOf(saldoActual - cantidad));
+
+            } else {
+                System.out.println("[Secundario] Error: Se esperaba O5 u O7, se recibió "
+                        + msgTx.getPrimitiva());
+                return;
             }
-        } catch (JsonSyntaxException | MalMensajeProtocoloException | IOException | ClassNotFoundException
-                | NumberFormatException e) {
-            System.err.println("[WalletSecundario] Error: " + e.getMessage());
+
+            // =========================================================
+            // FASE 3: CIERRE NORMAL (O9-O10)
+            // =========================================================
+
+            Object objO9 = entrada.readObject();
+            if (!(objO9 instanceof APPOfflineMensaje)) {
+                System.out.println("[Secundario] Error: Se esperaba APPOfflineMensaje en cierre.");
+                return;
+            }
+
+            APPOfflineMensaje msgO9 = (APPOfflineMensaje) objO9;
+            if (msgO9.getPrimitiva() == APPOfflinePrimitive.O9) {
+                salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitive.O10));
+                salida.flush();
+                System.out.println("[Secundario] Sesión cerrada correctamente.");
+            } else {
+                System.out.println("[Secundario] Error: Se esperaba O9.");
+            }
+
+        } catch (Exception e) {
+            System.err.println("[Secundario] Error: " + e.getMessage());
         } finally {
             try {
-                if (socket != null)
+                if (socket != null) {
                     socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+                }
+            } catch (Exception e) { }
         }
     }
 }

@@ -4,286 +4,268 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.Scanner;
 
 import eurocoin.common.APPBancoMensaje;
-import eurocoin.common.APPBancoPrimitiva;
+import eurocoin.common.APPBancoPrimitive;
 import eurocoin.common.MalMensajeProtocoloException;
 import eurocoin.util.Digest;
 import eurocoin.util.Movimientos;
 import eurocoin.util.Registro;
 
-// Esta clase gestiona la conexión con el Servidor Bancario y lleva a cabo la autenticación mutua APPBancoProtocol
-
 public class Wallet {
 
-    // Configuración de la conexión
-
-    // Dirección IP o nombre del host donde escucha el Servidor Bancario
     private static final String HOST_BANCO = "localhost";
-
-    // Puerto en el que el Servidor Bancario acepta conexiones
     private static final int PUERTO_BANCO = 2000;
 
-    // Socket TCP con el banco
     private Socket socket;
-
-    // Stream de salida para enviar objetos al banco
     private ObjectOutputStream salida;
-
-    // Stream de entrada para recibir objetos del banco
     private ObjectInputStream entrada;
-
-    // Registro JSON con los secretos y datos de la APP
     private final Registro registro;
-
-    // Función de hash usada en el protocolo
     private final Digest digest;
-
-    // Gestor de movimientos para registrar los recibos del banco
     private final Movimientos movimientos;
+    private final Scanner teclado;
 
-    // Constructor
-
-    // Crea un Wallet cargando los datos desde el archivo de registro
     public Wallet(String archivoRegistro) throws IOException {
         this.registro = new Registro(archivoRegistro);
-
-        // Leemos el algoritmo de hash del registro
-        String hashFunc = registro.getValor("FuncionHash");
-        this.digest = new Digest(hashFunc);
-
-        // Inicializamos el gestor de movimientos para guardar los recibos
+        this.digest = new Digest(registro.getValor("FuncionHash"));
         this.movimientos = new Movimientos("Movimientos.txt");
-
-        System.out.println("[ClienteBanco] Iniciado. Hash: " + hashFunc);
+        this.teclado = new Scanner(System.in);
     }
 
-    // Punto de entrada principal del cliente.
-    // Intenta conectar, autenticar y operar con el banco. Si la conexión o
-    // autenticación falla, entra en modo OFFLINE.
     public void iniciar() {
-        // Paso 0: Intentar conectar al banco via TCP
-        boolean conectado = conectar();
+        System.out.println("=== EUROCOIN WALLET ===");
+        System.out.println("1. Modo ONLINE (Conexión con Banco)");
+        System.out.println("2. Modo OFFLINE (Pago/Cobro directo)");
+        System.out.print("Seleccione opción: ");
 
-        if (!conectado) {
-            // No hay red o el banco no está activo
-            System.out.println("[ClienteBanco] MODO OFFLINE: no se pudo conectar al banco.");
-            return;
+        String opcion = teclado.nextLine();
+
+        if ("1".equals(opcion)) {
+            iniciarOnline();
+        } else if ("2".equals(opcion)) {
+            iniciarOffline();
+        } else {
+            System.out.println("[Wallet] Opción no válida.");
         }
+    }
 
+    private void iniciarOnline() {
         try {
-            // Pasos 1-6: Autenticación mutua
-            boolean autenticado = autenticar();
-
-            if (!autenticado) {
-                System.out.println("[ClienteBanco] MODO OFFLINE: autenticación fallida.");
+            if (!conectar()) {
                 return;
             }
 
-            // Pasos 7-8: Operar en modo online y luego cerrar sesión
-            System.out.println("[ClienteBanco] MODO ONLINE: autenticación completada con éxito.");
+            if (!autenticar()) {
+                System.out.println("[Wallet] Error en la autenticación mutua.");
+                return;
+            }
 
-            pedirRecarga(); // Solicitamos la recarga de fondos
+            System.out.println("[Wallet] Autenticación completada con éxito.");
 
-            operarYDespedirse();
+            // El módulo 3 exige operación simple:
+            // una conexión, una autenticación, una operación y una despedida.
+            realizarOperacionOnline();
+            despedirse();
 
-        } catch (IOException | ClassNotFoundException | MalMensajeProtocoloException e) {
-            System.out.println("[ClienteBanco] Error durante la sesión: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("[Wallet] Error en el flujo online: " + e.getMessage());
         } finally {
             cerrar();
         }
     }
 
-    // Abre la conexión TCP con el banco y prepara los streams de entrada/salida
-    // para el intercambio de objetos
+    private void iniciarOffline() {
+        System.out.println("[Wallet] Iniciando modo OFFLINE...");
+        System.out.println("1. Actuar como PAGADOR (Lanzar WalletOfflinePrimario)");
+        System.out.println("2. Actuar como COBRADOR (Lanzar WalletOfflineSecundario)");
+        System.out.print("Seleccione rol: ");
+
+        String rol = teclado.nextLine();
+
+        if ("1".equals(rol)) {
+            WalletOfflinePrimario.main(null);
+        } else if ("2".equals(rol)) {
+            WalletOfflineSecundario.main(null);
+        } else {
+            System.out.println("[Wallet] Rol no válido.");
+        }
+    }
+
     private boolean conectar() {
         try {
-            socket = new Socket(HOST_BANCO, PUERTO_BANCO);
-
-            // Importante: el ObjectOutputStream se crea ANTES del ObjectInputStream
-            salida = new ObjectOutputStream(socket.getOutputStream());
-            salida.flush();
-            entrada = new ObjectInputStream(socket.getInputStream());
-
-            System.out.println("[ClienteBanco] Conectado al banco en "
-                    + HOST_BANCO + ":" + PUERTO_BANCO);
+            this.socket = new Socket(HOST_BANCO, PUERTO_BANCO);
+            this.salida = new ObjectOutputStream(socket.getOutputStream());
+            this.salida.flush();
+            this.entrada = new ObjectInputStream(socket.getInputStream());
+            System.out.println("[Wallet] Conectado al banco.");
             return true;
-
         } catch (IOException e) {
-            System.out.println("[ClienteBanco] Sin conexión con el banco: " + e.getMessage());
+            System.out.println("[Wallet] Error al conectar: " + e.getMessage());
             return false;
         }
     }
 
-    // Realiza la autenticación mutua APP - Banco
-    private boolean autenticar() throws IOException, ClassNotFoundException {
-
-        // A1: Banco -> APP saludo(desafio_banco)
-        APPBancoPrimitiva prim = (APPBancoPrimitiva) entrada.readObject();
-        if (prim != APPBancoPrimitiva.A1) {
-            System.out.println("[ClienteBanco] Se esperaba A1, llegó: " + prim);
+    private boolean autenticar() throws IOException, ClassNotFoundException, MalMensajeProtocoloException {
+        Object objA1 = entrada.readObject();
+        if (!(objA1 instanceof APPBancoMensaje)) {
             return false;
         }
-        String desafioBanco = (String) entrada.readObject();
-        System.out.println("[ClienteBanco] A1 recibido. Desafío del banco: " + desafioBanco);
 
-        // Preparamos la respuesta al banco
+        APPBancoMensaje msgA1 = (APPBancoMensaje) objA1;
+        if (msgA1.getPrimitiva() != APPBancoPrimitive.A1) {
+            return false;
+        }
 
-        // Leemos datos del registro
+        String desafioBanco = msgA1.getArg1();
+        String secretoApp = registro.getValor("SecWallet");
+        String respuestaABanco = digest.generateHash(desafioBanco + secretoApp);
+
+        String desafioApp = "DesafApp-" + System.currentTimeMillis();
         String idCliente = registro.getValor("usuario");
-        String secretoApp = registro.getValor("SecWallet"); // secreto compartido APP - Banco
 
-        // Generamos nuestro propio desafío aleatorio
-        String desafioApp = Long.toHexString(System.currentTimeMillis())
-                + Integer.toHexString((int) (Math.random() * 0xFFFF));
-
-        // Calculamos HASH(desafio_banco + secreto_app)
-        String hashParaBanco = digest.generateHash(desafioBanco + secretoApp);
-
-        // A2: APP -> Banco saludo(desafio_app, id_cliente, hash)
-        System.out.println("[ClienteBanco] A2 enviado. id=" + idCliente
-                + "  desafioApp=" + desafioApp
-                + "  hash=" + hashParaBanco);
-        salida.writeObject(APPBancoPrimitiva.A2);
-        salida.writeObject(desafioApp);
-        salida.writeObject(idCliente);
-        salida.writeObject(hashParaBanco);
+        // Orden fiel al diagrama de proceso online:
+        // saludo(desafio_A, id_cliente, respuesta)
+        salida.writeObject(new APPBancoMensaje(APPBancoPrimitive.A2, desafioApp, idCliente, respuestaABanco));
         salida.flush();
 
-        // A3 / A4: respuesta del banco
-        APPBancoPrimitiva respBanco = (APPBancoPrimitiva) entrada.readObject();
-
-        if (respBanco == APPBancoPrimitiva.A3) {
-            // El banco no nos reconoce: APP queda comprometida
-            System.out.println("[ClienteBanco] A3 recibido: saludo_err. "
-                    + "La APP ha sido rechazada por el banco.");
+        Object objA4 = entrada.readObject();
+        if (!(objA4 instanceof APPBancoMensaje)) {
             return false;
         }
 
-        if (respBanco != APPBancoPrimitiva.A4) {
-            System.out.println("[ClienteBanco] Mensaje inesperado: " + respBanco);
+        APPBancoMensaje msgA4 = (APPBancoMensaje) objA4;
+        if (msgA4.getPrimitiva() != APPBancoPrimitive.A4) {
             return false;
         }
 
-        // A4: saludo_ok(HASH(desafio_app + secreto_banco))
-        String respuestaBanco = (String) entrada.readObject();
-        System.out.println("[ClienteBanco] A4 recibido. Respuesta del banco: " + respuestaBanco);
-
-        // Verificamos la identidad del banco
         String secretoBanco = registro.getValor("SecBanco");
-        String hashEsperado = digest.generateHash(desafioApp + secretoBanco);
+        String respuestaEsperada = digest.generateHash(desafioApp + secretoBanco);
 
-        if (hashEsperado.equals(respuestaBanco)) {
-            // A5: APP -> Banco saludo_ok
-            System.out.println("[ClienteBanco] Banco verificado correctamente. Enviando A5: saludo_ok.");
-            salida.writeObject(APPBancoPrimitiva.A5);
+        if (respuestaEsperada.equals(msgA4.getArg1())) {
+            salida.writeObject(new APPBancoMensaje(APPBancoPrimitive.A5));
             salida.flush();
-            return true; // Autenticación mutua completada con éxito
-
+            return true;
         } else {
-            // A6: APP -> Banco saludo_err
-            System.out.println("[ClienteBanco] El banco NO superó la verificación. Enviando A6: saludo_err.");
-            salida.writeObject(APPBancoPrimitiva.A6);
+            salida.writeObject(new APPBancoMensaje(APPBancoPrimitive.A6));
             salida.flush();
             return false;
         }
     }
 
-    // Módulo 3: Petición de recarga al banco (A9 y A10)
+    private void realizarOperacionOnline() throws Exception {
+        System.out.println("\n--- OPERACIÓN ONLINE ÚNICA ---");
+        System.out.println("1. Recargar fondos (A9)");
+        System.out.println("2. Salir sin operar");
+        System.out.print("Seleccione: ");
 
-    private void pedirRecarga() throws IOException, ClassNotFoundException, MalMensajeProtocoloException {
-        System.out.println(" Iniciando proceso de recarga de fondos...");
+        String op = teclado.nextLine();
 
-        String idCliente = registro.getValor("usuario");
-        java.util.Scanner escaner = new java.util.Scanner(System.in);
-        System.out.print(">>> Introduce la cantidad de EuroCoins a recargar: ");
-        String cantidadRecarga = escaner.nextLine();
+        if ("1".equals(op)) {
+            realizarRecarga();
+        } else if ("2".equals(op)) {
+            System.out.println("[Wallet] No se realizará ninguna operación.");
+        } else {
+            System.out.println("[Wallet] Opción no válida. Se cerrará la sesión.");
+        }
+    }
 
-        // 1. Construimos el JSON y su firma
-        String jsonRecarga = "{\"op\": \"recarga\", \"titular\": \"" + idCliente + "\", \"cantidad\": \""
-                + cantidadRecarga + "\"}";
-        String secWallet = registro.getValor("SecWallet");
-        String macRecarga = digest.generateHash(jsonRecarga + secWallet);
+    private void realizarRecarga() throws Exception {
+        System.out.print("[Wallet] Cantidad de EuroCoins a recargar: ");
+        String cantidad = teclado.nextLine();
 
-        // 2. Guardamos la operación saliente en Movimientos.txt
-        movimientos.guardarMovimiento(jsonRecarga, macRecarga);
+        String user = registro.getValor("usuario");
+        String jsonRecarga = "{ \"op\": \"recarga\", \"titular\": \"" + user + "\", \"cantidad\": \"" + cantidad + "\"}";
+        String macApp = digest.generateHash(jsonRecarga + registro.getValor("SecWallet"));
 
-        // 3. Enviamos A9 al banco usando el nuevo "sobre" APPBancoMensaje
-        System.out.println("[ClienteBanco] Enviando A9: Solicitando " + cantidadRecarga + " al banco...");
-        salida.writeObject(new APPBancoMensaje(APPBancoPrimitiva.A9, jsonRecarga, macRecarga));
+        // Guardar el documento firmado de la APP en Movimientos.txt
+        movimientos.guardarMovimiento(jsonRecarga, macApp);
+
+        System.out.println("[Wallet] Enviando A9 (petición de recarga)...");
+        salida.writeObject(new APPBancoMensaje(APPBancoPrimitive.A9, jsonRecarga, macApp));
         salida.flush();
 
-        // 4. Esperamos la confirmación A10
-        APPBancoMensaje respuesta = (APPBancoMensaje) entrada.readObject();
+        Object objResp = entrada.readObject();
+        if (!(objResp instanceof APPBancoMensaje)) {
+            System.out.println("[Wallet] Respuesta inválida del banco.");
+            return;
+        }
 
-        if (respuesta.getPrimitiva() == APPBancoPrimitiva.A10) {
+        APPBancoMensaje respuesta = (APPBancoMensaje) objResp;
+
+        if (respuesta.getPrimitiva() == APPBancoPrimitive.A10) {
             String jsonRecibo = respuesta.getArg1();
-            String macRecibo = respuesta.getArg2();
+            String macBanco = respuesta.getArg2();
 
-            // 5. Guardamos el recibo entrante en Movimientos.txt
-            movimientos.guardarMovimiento(jsonRecibo, macRecibo);
+            String secretoBanco = registro.getValor("SecBanco");
+            String macEsperado = digest.generateHash(jsonRecibo + secretoBanco);
 
-            // 6. Actualizamos nuestros fondos en el Registro
-            String fondosActuales = registro.getValor("FondosEC");
-            if (fondosActuales == null)
-                fondosActuales = "0.0"; // Por precaución
+            if (macEsperado.equals(macBanco)) {
+                System.out.println("[Wallet] A10 recibido. Firma válida.");
 
-            double nuevosFondos = Double.parseDouble(fondosActuales) + Double.parseDouble(cantidadRecarga);
-            registro.setValor("FondosEC", String.valueOf(nuevosFondos));
+                // Guardar también el recibo firmado del banco
+                movimientos.guardarMovimiento(jsonRecibo, macBanco);
 
-            System.out.println("[ClienteBanco] ¡Recarga completada! Saldo actualizado: " + nuevosFondos + " EC");
+                String fondosStr = registro.getValor("FondosEC");
+                double saldoActual = (fondosStr == null || fondosStr.trim().isEmpty())
+                        ? 0.0
+                        : Double.parseDouble(fondosStr);
+
+                double nuevoSaldo = saldoActual + Double.parseDouble(cantidad);
+                registro.setValor("FondosEC", String.valueOf(nuevoSaldo));
+
+                System.out.println("[Wallet] Recarga completada. Nuevo saldo: " + nuevoSaldo);
+            } else {
+                System.out.println("[Wallet] ERROR: Firma del banco inválida.");
+            }
+        } else if (respuesta.getPrimitiva() == APPBancoPrimitive.A3) {
+            System.out.println("[Wallet] El banco rechazó la operación.");
         } else {
-            System.out.println(
-                    "[ClienteBanco] Error en recarga. Se esperaba A10 pero llegó: " + respuesta.getPrimitiva());
+            System.out.println("[Wallet] Respuesta inesperada del banco: " + respuesta.getPrimitiva());
         }
     }
 
-    // Operación y despedida (A7 - A8)
-
-    private void operarYDespedirse() throws IOException, ClassNotFoundException {
-        System.out.println("  Sesión activa con el banco. Pulsa ENTER para");
-        System.out.println("  terminar la interacción.");
-
-        // Esperamos la pulsación de tecla del usuario
-        System.in.read();
-
-        // A7: APP -> Banco final
-        System.out.println("[ClienteBanco] Enviando A7: final.");
-        salida.writeObject(APPBancoPrimitiva.A7);
+    private void despedirse() throws IOException, ClassNotFoundException, MalMensajeProtocoloException {
+        System.out.println("[Wallet] Enviando A7 (final)...");
+        salida.writeObject(new APPBancoMensaje(APPBancoPrimitive.A7));
         salida.flush();
 
-        // A8: Banco -> APP final_ok
-        APPBancoPrimitiva respuesta = (APPBancoPrimitiva) entrada.readObject();
-        if (respuesta == APPBancoPrimitiva.A8) {
-            System.out.println("[ClienteBanco] A8 recibido: final_ok. Sesión cerrada correctamente.");
+        Object objA8 = entrada.readObject();
+        if (!(objA8 instanceof APPBancoMensaje)) {
+            System.out.println("[Wallet] Respuesta final inválida.");
+            return;
+        }
+
+        APPBancoMensaje msgA8 = (APPBancoMensaje) objA8;
+        if (msgA8.getPrimitiva() == APPBancoPrimitive.A8) {
+            System.out.println("[Wallet] A8 recibido (final_ok). Sesión cerrada.");
         } else {
-            System.out.println("[ClienteBanco] Respuesta inesperada al final: " + respuesta);
+            System.out.println("[Wallet] Respuesta inesperada al finalizar: " + msgA8.getPrimitiva());
         }
     }
-
-    // Cierre de recursos
 
     private void cerrar() {
         try {
-            if (salida != null)
+            if (salida != null) {
                 salida.close();
-            if (entrada != null)
+            }
+            if (entrada != null) {
                 entrada.close();
-            if (socket != null)
+            }
+            if (socket != null) {
                 socket.close();
-            System.out.println("[ClienteBanco] Recursos liberados.");
+            }
         } catch (IOException e) {
-            System.out.println("[ClienteBanco] Error al cerrar recursos: " + e.getMessage());
+            System.out.println("[Wallet] Error cerrando recursos: " + e.getMessage());
         }
     }
 
     public static void main(String[] args) {
         try {
-            Wallet cliente = new Wallet("Registro.json");
-            cliente.iniciar();
+            Wallet wallet = new Wallet("Registro.json");
+            wallet.iniciar();
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("[Wallet] Error fatal: " + e.getMessage());
         }
     }
-
 }
