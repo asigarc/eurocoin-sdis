@@ -1,35 +1,22 @@
 {
   "BancoBob": {
     "MasterKey": "9942koofffo",
-    "SecWallet": "Secreto-PedroLuis",
+    "SecWallet": "Secreto-BancoBob-APP",
     "SecBanco": "Secreto-BancoBob",
     "FondosEC": "50000"
   },
-<<<<<<< HEAD
   "PedroLuis": {
-=======
-    "PedroLuis": {
->>>>>>> 29c195b094561642db814d378ab0d6274bdb545a
     "MasterKey": "9942koofffo",
     "SecWallet": "Secreto-PedroLuis",
     "SecBanco": "Secreto-BancoBob",
     "Saldo": "1500",
     "FondosEC": "50"
   },
-<<<<<<< HEAD
   "AngelAntonio": {
-=======
-    "AngelAntonio": {
->>>>>>> 29c195b094561642db814d378ab0d6274bdb545a
     "MasterKey": "9942koofffo",
     "SecWallet": "Secreto-AngelAntonio",
     "SecBanco": "Secreto-BancoBob",
     "Saldo": "1500",
     "FondosEC": "500"
   }
-<<<<<<< HEAD
 }
-=======
-}
-
->>>>>>> 29c195b094561642db814d378ab0d6274bdb545a
