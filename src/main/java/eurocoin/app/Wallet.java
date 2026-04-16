@@ -261,11 +261,34 @@ public class Wallet {
     }
 
     public static void main(String[] args) {
+        // Creamos el escáner para la entrada de teclado
+        java.util.Scanner scanner = new java.util.Scanner(System.in);
+        
+        // 1. Verificación local (Requisito del diagrama de la pág. 2)
+        // Esta llamada maneja los 3 intentos y la lectura de Registro.json
+        if (!eurocoin.util.AutenticadorLocal.verificarContrasena(scanner)) {
+            System.out.println("\n[ERROR] Se han agotado los intentos o hubo un error.");
+            System.out.println("Invalidación de la APP. Cerrando sistema...");
+            scanner.close();
+            System.exit(1); // Terminamos el programa aquí
+        }
+
+        // 2. Conexión y Autenticación Mutua
+        // Solo si la contraseña fue correcta llegamos a este punto
         try {
+<<<<<<< HEAD
             Wallet wallet = new Wallet("Registro.json");
             wallet.iniciar();
         } catch (IOException e) {
             System.out.println("[Wallet] Error fatal: " + e.getMessage());
+=======
+            Wallet cliente = new Wallet("Registro.json");
+            cliente.iniciar(); // Aquí es donde se llama a conectar() y autenticar()
+        } catch (java.io.IOException e) {
+            System.err.println("[ERROR] No se pudo iniciar el Wallet: " + e.getMessage());
+        } finally {
+            scanner.close();
+>>>>>>> 29c195b094561642db814d378ab0d6274bdb545a
         }
     }
 }

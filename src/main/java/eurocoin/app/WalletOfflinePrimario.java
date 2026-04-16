@@ -18,6 +18,17 @@ import eurocoin.util.Registro;
 public class WalletOfflinePrimario {
 
     public static void main(String[] args) {
+        
+        // --- INICIO DE SEGURIDAD LOCAL ---
+        java.util.Scanner scanner = new java.util.Scanner(System.in);
+        if (!eurocoin.util.AutenticadorLocal.verificarContrasena(scanner)) {
+            System.out.println("\n[ERROR] Se han agotado los intentos o hubo un error.");
+            System.out.println("Invalidación de la APP. Cerrando sistema...");
+            scanner.close();
+            System.exit(1);
+        }
+        // --- FIN DE SEGURIDAD LOCAL ---
+        
         String host = "localhost";
         int puerto = 3000;
 
