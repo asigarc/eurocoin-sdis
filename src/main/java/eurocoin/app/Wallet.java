@@ -152,10 +152,14 @@ public class Wallet {
             return false;
         }
     }
-
+    /**
+     * Operaciones para Online
+     * @throws Exception
+     */
     private void realizarOperacionOnline() throws Exception {
         System.out.println("\n--- OPERACIÓN ONLINE ÚNICA ---");
         System.out.println("1. Recargar fondos (A9)");
+        System.out.println("2. Descargar fondos (A11)");
         System.out.println("2. Salir sin operar");
         System.out.print("Seleccione: ");
 
@@ -164,16 +168,32 @@ public class Wallet {
         if ("1".equals(op)) {
             realizarRecarga();
         } else if ("2".equals(op)) {
+            realizarDescarga();
+        } else if ("3".equals(op)) {
             System.out.println("[Wallet] No se realizará ninguna operación.");
         } else {
             System.out.println("[Wallet] Opción no válida. Se cerrará la sesión.");
         }
     }
 
+    /**
+     * Operacion de Recarga (modo online)
+     * @throws Exception
+     */
     private void realizarRecarga() throws Exception {
         System.out.print("[Wallet] Cantidad de EuroCoins a recargar: ");
         String cantidad = teclado.nextLine();
-
+        double valor; 
+        try {
+            valor = Double.parseDouble(cantidad); // comprueba numero negativo, ya que restaría en vez de recargar
+            if (valor <= 0) {
+                System.out.println("[Wallet] ERROR: La cantidad debe ser positiva.");
+                return;
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("[Wallet] ERROR: Debes introducir un número válido.");
+            return;
+        }
         String user = registro.getValor("usuario");
         String jsonRecarga = "{ \"op\": \"recarga\", \"titular\": \"" + user + "\", \"cantidad\": \"" + cantidad
                 + "\"}";
@@ -219,6 +239,67 @@ public class Wallet {
             } else {
                 System.out.println("[Wallet] ERROR: Firma del banco inválida.");
             }
+        } else if (respuesta.getPrimitiva() == APPBancoPrimitive.A3) {
+            System.out.println("[Wallet] El banco rechazó la operación.");
+        } else {
+            System.out.println("[Wallet] Respuesta inesperada del banco: " + respuesta.getPrimitiva());
+        }
+    }
+
+    /**
+     * Operacion de Descarga (modo online)
+     * @throws Exception
+     */
+    private void realizarDescarga() throws Exception {
+        System.out.print("[Wallet] Cantidad de EuroCoins a descargar: ");
+        String cantidad = teclado.nextLine();
+
+        String user = registro.getValor("usuario");
+        String jsonDescarga = "{ \"op\": \"descarga\", \"titular\": \"" + user + "\", \"cantidad\": \"" + cantidad + "\"}";
+        String macApp = digest.generateHash(jsonDescarga + registro.getValor("SecWallet"));
+
+        // Guardar el documento firmado de la APP
+        movimientos.guardarMovimiento(jsonDescarga, macApp);
+
+        System.out.println("[Wallet] Enviando A11 (petición de descarga)...");
+        salida.writeObject(new APPBancoMensaje(APPBancoPrimitive.A11, jsonDescarga, macApp));
+        salida.flush();
+
+        Object objResp = entrada.readObject();
+        if (!(objResp instanceof APPBancoMensaje)) {
+            System.out.println("[Wallet] Respuesta inválida del banco.");
+            return;
+        }
+
+        APPBancoMensaje respuesta = (APPBancoMensaje) objResp;
+
+        if (respuesta.getPrimitiva() == APPBancoPrimitive.A12) {
+            String jsonRecibo = respuesta.getArg1();
+            String macBanco = respuesta.getArg2();
+
+            String secretoBanco = registro.getValor("SecBanco");
+            String macEsperado = digest.generateHash(jsonRecibo + secretoBanco);
+
+            if (macEsperado.equals(macBanco)) {
+                System.out.println("[Wallet] A12 recibido. Firma válida.");
+
+                // Guardar recibo del banco
+                movimientos.guardarMovimiento(jsonRecibo, macBanco);
+
+                // Actualizar FondosEC (disminuye)
+                String fondosStr = registro.getValor("FondosEC");
+                double fondosActual = (fondosStr == null || fondosStr.trim().isEmpty())
+                        ? 0.0
+                        : Double.parseDouble(fondosStr);
+
+                double nuevoSaldo = fondosActual - Double.parseDouble(cantidad);
+                registro.setValor("FondosEC", String.valueOf(nuevoSaldo));
+
+                System.out.println("[Wallet] Descarga completada. Nuevo saldo: " + nuevoSaldo);
+            } else {
+                System.out.println("[Wallet] ERROR: Firma del banco inválida.");
+            }
+
         } else if (respuesta.getPrimitiva() == APPBancoPrimitive.A3) {
             System.out.println("[Wallet] El banco rechazó la operación.");
         } else {

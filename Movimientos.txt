@@ -1,0 +1,12 @@
+{ "op": "recarga", "titular": "PedroLuis", "cantidad": "100"}
+e351169c9b38b0f9c2fb4b40de1c76eeca76687668c7d9109d4ae710976a19cc
+{ "op": "recibo-recarga", "titular": "PedroLuis", "cantidad": "100", "fecha": "Fri Apr 17 22:14:37 CEST 2026"}
+bbf82df696075edbc05386f97cb5c048db1395719d45f85aba7c8ea44b30f832
+{ "op": "recarga", "titular": "PedroLuis", "cantidad": "-1"}
+c9fd928bf5ae0d0d903e8f9b4e491f101589be5a24b3b0ef36c553cad56dc281
+{ "op": "recibo-recarga", "titular": "PedroLuis", "cantidad": "-1", "fecha": "Sun Apr 19 22:47:10 CEST 2026"}
+50b01e9ffdf4b5ceb423e8f38c84b906f82e64581ac90656646d7b989155be60
+{ "op": "descarga", "titular": "PedroLuis", "cantidad": "3"}
+c2d6cbec4cfcc0f97e4c9d390ed3e08876b024ed8d2822de9592930bcb8675bd
+{ "op": "recibo-descarga", "titular": "PedroLuis", "cantidad": "3", "fecha": "Sun Apr 19 23:02:49 CEST 2026"}
+7051ac63503b899a50262a2cbf36d1eaf9f5dc905517b7dd7841c7017f8f48fd
