@@ -16,13 +16,18 @@
 [![](https://mermaid.ink/img/pako:eNqFVNtunDAQ_RU0z2RD2F0oqC-59KEPq6KmaqSKF8fMEqfGRrZZpd3y7zXXEhZUJHM5Z-bM8TDyGajMEGKgnGj9wEiuSJEKx15aUefjn6srByslqWRiBmvByhKN7uAhqONIWS7Bz0RQuURQWRRSLDGVYTz9Vzq26_rCUIu-99Pd212NiucObFNGkevR6wyfmJ0xU7czqrPbwPWlj8Hh6CNRFT6Tr5gzbZTcvJITWU22Nse8b8n3L8cjZwInOR0sLtAnwjmaBaiXSBQriGJyPeIRaSWyWUw9_JXOXtstZ3ToOHcN8E6zxx6ZOjEUBtfFugZPxG6TpM09oNDkFWeyA9vshBl2WuDveVvys13qSOh6xGqFvhf_4wcPZGnra-UPhPe6iZLGThKXn94oloZJsd6lZtYmPXpgOWozV5Yn68duTOoZszx14EKuWAbxkXCNLhSoCtJ8Q1spBfOCBaYQ21c7ET9TSEVtk0oifkhZQGzsSLugZJW_jCJVmRGD_eEyogpFhupeVsJA7Ide0KpAfIY3iEN_8yHce14Y-NE22u23LvyC-Mb3Nv5NFPrBPvD3tQu_25qejd1FkcV3wW4bBoHvAmbMSHXoD7fmUf8FUkqPQQ?type=png)](https://mermaid.ai/live/edit#pako:eNqFVNtunDAQ_RU0z2RD2F0oqC-59KEPq6KmaqSKF8fMEqfGRrZZpd3y7zXXEhZUJHM5Z-bM8TDyGajMEGKgnGj9wEiuSJEKx15aUefjn6srByslqWRiBmvByhKN7uAhqONIWS7Bz0RQuURQWRRSLDGVYTz9Vzq26_rCUIu-99Pd212NiucObFNGkevR6wyfmJ0xU7czqrPbwPWlj8Hh6CNRFT6Tr5gzbZTcvJITWU22Nse8b8n3L8cjZwInOR0sLtAnwjmaBaiXSBQriGJyPeIRaSWyWUw9_JXOXtstZ3ToOHcN8E6zxx6ZOjEUBtfFugZPxG6TpM09oNDkFWeyA9vshBl2WuDveVvys13qSOh6xGqFvhf_4wcPZGnra-UPhPe6iZLGThKXn94oloZJsd6lZtYmPXpgOWozV5Yn68duTOoZszx14EKuWAbxkXCNLhSoCtJ8Q1spBfOCBaYQ21c7ET9TSEVtk0oifkhZQGzsSLugZJW_jCJVmRGD_eEyogpFhupeVsJA7Ide0KpAfIY3iEN_8yHce14Y-NE22u23LvyC-Mb3Nv5NFPrBPvD3tQu_25qejd1FkcV3wW4bBoHvAmbMSHXoD7fmUf8FUkqPQQ)
 
 
-**eurocoin/banco/** -> Contiene el codigo del servidor bancario. Banco.java contiene el servidor, y BancoSirviente crea un hilo para cada cliente.  
+**eurocoin/banco/** -> Contiene el codigo del servidor bancario.  
+Banco.java se encarga de iniciar el servidor y aceptar conexiones, mientras que BancoSirviente gestiona cada cliente con un hilo independiente, realizando autenticación y las operaciones como recargas y descargas.  
 
-**eurocoin/app/** -> Contiene las aplicaciones cliente del sistema EuroCoin. Wallet implementa la cartera del usuario, permite recargar dinero, realizar pagos offline y descargar dinero a la cuenta. TPV implementa un terminal que puede solicitar cobros a uuna cartera en modo offline.
+**eurocoin/app/** -> Contiene las aplicaciones cliente del sistema EuroCoin.  
+Wallet representa la cartera del usuario, permitiendo operar en modo online (con el banco) y offline (pagos directos).  
+TPV simula un terminal de cobros que puede solicitar pagos a un wallet modo offline.
 
-**eurocoin/common/** -> clases compartidas entre el banco y las aplicaciones cliente.
+**eurocoin/common/** -> Incluye las clases compartidas entre el banco y clientes.  
+Se definen los mensajes, primitivas del protocolo y excepciones que permiten la comunicación entre las distintas partes del sistema.
 
-**eurocoin/util/** -> Clases de utilidad para el proyecto. Generar MAC, lectura y escritura de archivos json. 
+**eurocoin/util/** -> Contiene clases auxiliares necesarias para el funcionamiento.  
+Se encarga de operaciones como generación de hashes/MAC, gestión de registros (JSON) y almacenar de movimientos.  
 
 
 
