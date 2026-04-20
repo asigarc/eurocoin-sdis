@@ -16,7 +16,7 @@ import eurocoin.util.Registro;
 
 public class TPVOnline {
 
-    private static final String HOST_BANCO = "L103C6";
+    private static final String HOST_BANCO = "localhost";
     private static final int PUERTO_BANCO = 2000;
 
     private Socket socket;

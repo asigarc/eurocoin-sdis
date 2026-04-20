@@ -19,7 +19,7 @@ import eurocoin.util.Registro;
 
 public class TPVOffline {
 
-    private static final String HOST_CLIENTE = "L103C6";
+    private static final String HOST_CLIENTE = "localhost";
     private static final int PUERTO_CLIENTE = 3000;
 
     private Socket socket;
