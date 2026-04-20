@@ -131,7 +131,6 @@ public class BancoSirviente implements Runnable {
                 return false;
             }
 
-            // Orden coherente con Wallet y TPVOnline:
             // (desafio_app, id_cliente, respuesta)
             String desafioApp = msgA2.getArg1();
             String idCliente = msgA2.getArg2();

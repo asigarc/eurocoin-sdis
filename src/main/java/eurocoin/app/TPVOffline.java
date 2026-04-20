@@ -19,7 +19,7 @@ import eurocoin.util.Registro;
 
 public class TPVOffline {
 
-    private static final String HOST_CLIENTE = "localhost";
+    private static final String HOST_CLIENTE = "L103C6";
     private static final int PUERTO_CLIENTE = 3000;
 
     private Socket socket;
@@ -177,7 +177,6 @@ public class TPVOffline {
 
     private void cerrar() {
         try {
-            // No cerramos el Scanner para no matar el System.in de la APP principal
             if (salida != null) salida.close();
             if (entrada != null) entrada.close();
             if (socket != null) socket.close();

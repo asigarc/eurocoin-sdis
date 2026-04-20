@@ -58,9 +58,7 @@ public class WalletOfflineSecundario {
             String secWallet = registro.getValor("SecWallet");
             String miNombre = registro.getValor("usuario");
 
-            // =========================================================
             // FASE 1: AUTENTICACIÓN OFFLINE (O1-O4) -> MASTERKEY
-            // =========================================================
 
             Object objO1 = entrada.readObject();
             if (!(objO1 instanceof APPOfflineMensaje)) {
@@ -104,9 +102,7 @@ public class WalletOfflineSecundario {
             salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitive.O4, miNombre));
             salida.flush();
 
-            // =========================================================
             // FASE 2: OPERACIÓN OFFLINE (O5/O7 -> O6/O8)
-            // =========================================================
 
             Object objTx = entrada.readObject();
             if (!(objTx instanceof APPOfflineMensaje)) {
@@ -117,17 +113,11 @@ public class WalletOfflineSecundario {
             APPOfflineMensaje msgTx = (APPOfflineMensaje) objTx;
 
             if (msgTx.getPrimitiva() == APPOfflinePrimitive.O5) {
-                // -----------------------------------------------------
                 // CASO O5: INGRESO -> O6 RECIBO
-                // -----------------------------------------------------
+
                 String jsonIngreso = msgTx.getArg1();
                 String macIngreso = msgTx.getArg2();
 
-                /*
-                 * Nota de diseño:
-                 * El receptor no dispone del secreto privado del emisor, por lo que
-                 * almacena (documento, firma) como evidencia para posterior consolidación.
-                 */
                 movimientos.guardarMovimiento(jsonIngreso, macIngreso);
 
                 Map<String, String> datos = gson.fromJson(
@@ -154,16 +144,11 @@ public class WalletOfflineSecundario {
                 registro.setValor("IngresosEC", String.valueOf(total));
 
             } else if (msgTx.getPrimitiva() == APPOfflinePrimitive.O7) {
-                // -----------------------------------------------------
+
                 // CASO O7: FACTURA -> O8 PAGO
-                // -----------------------------------------------------
                 String jsonFactura = msgTx.getArg1();
                 String macFactura = msgTx.getArg2();
 
-                /*
-                 * Igual que en O5, se conserva la evidencia (documento, firma)
-                 * para consolidación posterior.
-                 */
                 movimientos.guardarMovimiento(jsonFactura, macFactura);
 
                 Map<String, String> datos = gson.fromJson(
@@ -203,9 +188,7 @@ public class WalletOfflineSecundario {
                 return;
             }
 
-            // =========================================================
             // FASE 3: CIERRE NORMAL (O9-O10)
-            // =========================================================
 
             Object objO9 = entrada.readObject();
             if (!(objO9 instanceof APPOfflineMensaje)) {

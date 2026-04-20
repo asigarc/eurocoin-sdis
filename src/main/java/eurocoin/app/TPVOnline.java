@@ -16,7 +16,7 @@ import eurocoin.util.Registro;
 
 public class TPVOnline {
 
-    private static final String HOST_BANCO = "localhost";
+    private static final String HOST_BANCO = "L103C6";
     private static final int PUERTO_BANCO = 2000;
 
     private Socket socket;
@@ -25,10 +25,9 @@ public class TPVOnline {
     private final Registro registro;
     private final Digest digest;
     private final Movimientos movimientos;
-    private final Scanner teclado; // Añadido para consistencia con Wallet
+    private final Scanner teclado; // Añadido
 
     public TPVOnline(String archivoRegistro) throws IOException {
-        // Paquete eurocoin.util según P1_tercerModulo.pdf
         this.registro = new Registro(archivoRegistro);
         this.digest = new Digest(registro.getValor("FuncionHash"));
         this.movimientos = new Movimientos("Movimientos.txt");
@@ -48,8 +47,6 @@ public class TPVOnline {
 
             System.out.println("[TPVOnline] Autenticación completada con éxito.");
 
-            // El módulo 3 exige operación simple:
-            // una conexión, una autenticación, una operación y una despedida.
             realizarOperacionOnline();
             despedirse();
 
@@ -141,11 +138,11 @@ public class TPVOnline {
             ingresos = "0.0";
         }
 
-        // JSON Módulo 3: titular y cantidad
+        // JSON titular y cantidad
         String jsonDescarga = "{ \"op\": \"descarga\", \"titular\": \"" + user + "\", \"cantidad\": \"" + ingresos + "\"}";
         String macDescarga = digest.generateHash(jsonDescarga + registro.getValor("SecWallet"));
 
-        // Guardar rastro de la transacción (Fiel a Autenticacion.pdf)
+        // Guardar rastro de la transacción
         movimientos.guardarMovimiento(jsonDescarga, macDescarga);
 
         System.out.println("[TPVOnline] Enviando A11 (descarga)...");
@@ -171,7 +168,7 @@ public class TPVOnline {
                 movimientos.guardarMovimiento(jsonRecibo, macBanco);
                 registro.setValor("IngresosEC", "0.0");
 
-                // Consolidación física: vaciado de Movimientos.txt (P1_tercerModulo.pdf)
+                // Vaciado de Movimientos.txt
                 try (PrintWriter writer = new PrintWriter("Movimientos.txt")) {
                     writer.print("");
                 }

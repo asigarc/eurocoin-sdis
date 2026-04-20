@@ -47,10 +47,7 @@ public class WalletOfflinePrimario {
             String secWallet = registro.getValor("SecWallet");
             String miNombre = registro.getValor("usuario");
 
-            // =========================================================
             // FASE 1: HANDSHAKE OFFLINE (O1-O4) -> MASTERKEY
-            // =========================================================
-            //
 
             String desafP = "DesafP-" + System.currentTimeMillis();
             salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitive.O1, desafP));
@@ -79,9 +76,7 @@ public class WalletOfflinePrimario {
             }
             String nombreSec = ((APPOfflineMensaje)objO4).getArg1();
 
-            // =========================================================
             // FASE 2: OPERACIÓN OFFLINE (O5 -> O6) -> SECWALLET
-            // =========================================================
 
             Scanner sc = new Scanner(System.in);
             System.out.print(">>> Cantidad a enviar a " + nombreSec + ": ");
@@ -132,9 +127,7 @@ public class WalletOfflinePrimario {
             registro.setValor("FondosEC", String.valueOf(saldoActual - cantidadDouble));
             System.out.println("[Primario] Transacción completada y recibo guardado.");
 
-            // =========================================================
             // FASE 3: CIERRE (O9-O10)
-            // =========================================================
 
             salida.writeObject(new APPOfflineMensaje(APPOfflinePrimitive.O9));
             salida.flush();

@@ -15,7 +15,7 @@ import eurocoin.util.Registro;
 
 public class Wallet {
 
-    private static final String HOST_BANCO = "localhost";
+    private static final String HOST_BANCO = "L103C6";
     private static final int PUERTO_BANCO = 2000;
 
     private Socket socket;
@@ -172,10 +172,7 @@ public class Wallet {
         }
     }
 
-    /**
-     * Operacion de Recarga (modo online)
-     * @throws Exception
-     */
+    // Operacion de Recarga (modo online)
     private void realizarRecarga() throws Exception {
         System.out.print("[Wallet] Cantidad de EuroCoins a recargar: ");
         String cantidad = teclado.nextLine();
@@ -242,10 +239,8 @@ public class Wallet {
         }
     }
 
-    /**
-     * Operacion de Descarga (modo online)
-     * @throws Exception
-     */
+    // Operacion de Descarga (modo online)
+
     private void realizarDescarga() throws Exception {
         System.out.print("[Wallet] Cantidad de EuroCoins a descargar: ");
         String cantidad = teclado.nextLine();

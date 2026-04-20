@@ -6,11 +6,6 @@ public enum APPBancoPrimitive implements java.io.Serializable {
   A1, // saludo(desafio_banco) banco->app
   A2, // saludo(desafio_app, id_cliente, hash(desafio_banco+secreto_app)) app->banco
   A3, // saludo_err.
-      // Uso original: error en la autenticación (según protocolo oficial).
-      // Uso extendido en esta implementación:
-      // también se emplea como señal genérica de error para operaciones (A9/A11)
-      // cuando falla la validación de MAC, con el objetivo de evitar bloqueos
-      // del cliente en readObject() y permitir el cierre controlado de la sesión.
   A4, // saludo_ok(hash(desafio_app+secreto_banco)) banco->app
   A5, // saludo_ok app->banco
   A6, // saludo_err app->banco
