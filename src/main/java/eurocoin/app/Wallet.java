@@ -15,7 +15,7 @@ import eurocoin.util.Registro;
 
 public class Wallet {
 
-    private static final String HOST_BANCO = "L103C6";
+    private static final String HOST_BANCO = "localhost";
     private static final int PUERTO_BANCO = 2000;
 
     private Socket socket;
@@ -63,8 +63,6 @@ public class Wallet {
 
             System.out.println("[Wallet] Autenticación completada con éxito.");
 
-            // El módulo 3 exige operación simple:
-            // una conexión, una autenticación, una operación y una despedida.
             realizarOperacionOnline();
             despedirse();
 
@@ -124,8 +122,6 @@ public class Wallet {
         String desafioApp = "DesafApp-" + System.currentTimeMillis();
         String idCliente = registro.getValor("usuario");
 
-        // Orden fiel al diagrama de proceso online:
-        // saludo(desafio_A, id_cliente, respuesta)
         salida.writeObject(new APPBancoMensaje(APPBancoPrimitive.A2, desafioApp, idCliente, respuestaABanco));
         salida.flush();
 
