@@ -160,7 +160,7 @@ public class Wallet {
         System.out.println("\n--- OPERACIÓN ONLINE ÚNICA ---");
         System.out.println("1. Recargar fondos (A9)");
         System.out.println("2. Descargar fondos (A11)");
-        System.out.println("2. Salir sin operar");
+        System.out.println("3. Salir sin operar");
         System.out.print("Seleccione: ");
 
         String op = teclado.nextLine();
