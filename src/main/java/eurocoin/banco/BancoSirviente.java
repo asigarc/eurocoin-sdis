@@ -25,6 +25,9 @@ public class BancoSirviente implements Runnable {
     private static final Object REGISTRO_LOCK = new Object();
 
     private final Socket socketCliente;
+    private final String archivoRegistro; // pasar ruta: data/banco1/RegistroBanco.json etc
+    private final String archivoMovimientos;
+
     private ObjectOutputStream salida;
     private ObjectInputStream entrada;
     private Digest digest;
@@ -34,11 +37,18 @@ public class BancoSirviente implements Runnable {
     private final Gson gson = new Gson();
     private final Gson gsonPretty = new GsonBuilder().setPrettyPrinting().create();
 
-    public BancoSirviente(Socket socketCliente) {
+    /* public BancoSirviente(Socket socketCliente) {
         this.socketCliente = socketCliente;
         this.idClienteAutenticado = null;
+    }*/ 
+    //Modificación P2 :
+    public BancoSirviente(Socket socketCliente, String archivoRegistro,String archivoMovimientos) {
+            this.socketCliente = socketCliente;
+            this.idClienteAutenticado = null;
+            this.archivoRegistro = archivoRegistro;
+            this.archivoMovimientos = archivoMovimientos;
     }
-
+    
     @Override
     public void run() {
         try {
@@ -98,7 +108,7 @@ public class BancoSirviente implements Runnable {
     }
 
     private void cargarRegistroBanco() throws IOException {
-        try (Reader reader = new FileReader("RegistroBanco.json")) {
+        try (Reader reader = new FileReader(archivoRegistro)) { // new FileReader("RegistroBanco.json")
             this.registroBanco = gson.fromJson(
                     reader,
                     new TypeToken<Map<String, Map<String, String>>>() {}.getType());
@@ -110,7 +120,7 @@ public class BancoSirviente implements Runnable {
     }
 
     private void guardarRegistroBanco() throws IOException {
-        try (Writer writer = new FileWriter("RegistroBanco.json")) {
+        try (Writer writer = new FileWriter(archivoRegistro)) { // new FileWriter("RegistroBanco.json")
             gsonPretty.toJson(this.registroBanco, writer);
         }
     }

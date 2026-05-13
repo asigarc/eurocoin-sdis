@@ -15,8 +15,9 @@ public class Banco {
     // Configuración del Pool de Hilos (ml2.2_Notas_2024_v3.pdf pág 2)
     private static final int N_THREADS = 10;
 
-    public static void main(String[] args) {
-        int puerto = 2000;
+    public static void main(String[] args) { // java Banco 2000 data/banco1/RegistroBanco.json data/banco1/MovimientosBanco.txt
+        // int puerto = 2000;
+        int puerto = Integer.parseInt(args[0]);
         
         // Crear el Pool de hilos
         ExecutorService pool = Executors.newFixedThreadPool(N_THREADS);
@@ -32,8 +33,18 @@ public class Banco {
                 Socket socketCliente = serverSocket.accept();
                 System.out.println("[Banco] Nueva conexión detectada desde: " + socketCliente.getInetAddress());
 
-                // Lanzar el sirviente usando el Pool en lugar de 'new Thread().start()'
-                pool.execute(new BancoSirviente(socketCliente));
+                
+                // pool.execute(new BancoSirviente(socketCliente)); --> Esto es de la P1 
+                String archivoRegistro = args[1];
+                String archivoMovimientos = args[2];
+
+                pool.execute(
+                    new BancoSirviente(
+                        socketCliente,
+                        archivoRegistro,
+                        archivoMovimientos
+                    )
+                );
             }
         } catch (Exception e) {
             System.err.println("[Banco] Error crítico en el servidor: " + e.getMessage());
