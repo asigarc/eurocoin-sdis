@@ -33,6 +33,7 @@ Se encarga de operaciones como generación de hashes/MAC, gestión de registros 
 >NOTA: Los miembros del equipo manifiestan ser los autores de la práctica presentada en este repositorio. Los autores manifiestan haber realizado la presente práctica ateniéndose al código de conducta establecido por la Universidad de Valladolid para la presentación de trabajos y uso responsable de herramientas de IA
 
 --- 
+### Compilar:
   
 *Linux:*
 ```bash 
@@ -42,4 +43,5 @@ java -cp ".:lib/gson-2.13.2.jar" eurocoin.banco.Banco
 *Windows:*
 ```bash
 javac -d . -cp ".;lib/gson-2.13.2.jar" src/main/java/eurocoin/app/*.java src/main/java/eurocoin/banco/*.java src/main/java/eurocoin/common/*.java src/main/java/eurocoin/util/*.java 
-java -cp ".;lib/gson-2.13.2.jar" eurocoin.banco.Banco ```
+java -cp ".;lib/gson-2.13.2.jar" eurocoin.banco.Banco 
+```
