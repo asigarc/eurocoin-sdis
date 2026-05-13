@@ -13,19 +13,28 @@ public class GrantServerObject extends UnicastRemoteObject implements GrantServe
 
     @Override
     public Parametros nuevoBanco(String nombre, Integer activos) throws RemoteException {
-        // 
-        return null;
+        return new Parametros(
+            10000,
+            100000,
+            activos
+        );
     }
 
     @Override
     public Parametros solicitaAumento(Integer fondoECPrevisto) throws RemoteException {
-        // 
-        return null;
+        return new Parametros(
+            10000,
+            100000,
+            fondoECPrevisto + 50000
+        );
     }
 
     @Override
     public Parametros solicitaDecremento(Integer fondoECPrevisto) throws RemoteException {
-        // 
-        return null;
+        return new Parametros(
+            10000,
+            100000,
+            fondoECPrevisto - 50000
+        );
     }
 }
