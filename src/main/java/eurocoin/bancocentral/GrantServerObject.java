@@ -5,14 +5,14 @@ import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 
 
-public class GrantServerObject extends UnicastRemoteObject implements GrantServer {
+public class GrantServerObject extends UnicastRemoteObject implements GrantServer { // hay que hacer algo con nombreBanco??
 
     public GrantServerObject() throws RemoteException {
         super();
     }
 
     @Override
-    public Parametros nuevoBanco(String nombre, Integer activos) throws RemoteException {
+    public Parametros nuevoBanco(String nombreBanco, Integer activos) throws RemoteException {
         return new Parametros(
             10000,
             100000,
@@ -21,7 +21,7 @@ public class GrantServerObject extends UnicastRemoteObject implements GrantServe
     }
 
     @Override
-    public Parametros solicitaAumento(Integer fondoECPrevisto) throws RemoteException {
+    public Parametros solicitaAumento(String nombreBanco, Integer fondoECPrevisto) throws RemoteException {
         return new Parametros(
             10000,
             100000,
@@ -30,7 +30,7 @@ public class GrantServerObject extends UnicastRemoteObject implements GrantServe
     }
 
     @Override
-    public Parametros solicitaDecremento(Integer fondoECPrevisto) throws RemoteException {
+    public Parametros solicitaDecremento(String nombreBanco, Integer fondoECPrevisto) throws RemoteException {
         return new Parametros(
             10000,
             100000,

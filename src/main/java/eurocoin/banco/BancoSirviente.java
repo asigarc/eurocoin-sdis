@@ -25,7 +25,7 @@ public class BancoSirviente implements Runnable {
     private static final Object REGISTRO_LOCK = new Object();
 
     private final Socket socketCliente;
-    private final String archivoRegistro; // pasar ruta: data/banco1/RegistroBanco.json etc
+    private final String archivoRegistro; // ahora hay que pasar ruta: data/banco1/RegistroBanco.json etc
     private final String archivoMovimientos;
 
     private ObjectOutputStream salida;
