@@ -239,6 +239,15 @@ public class BancoSirviente implements Runnable {
 
             clienteActual.put("Saldo", String.valueOf(saldoActual - cantidad));
             clienteActual.put("FondosEC", String.valueOf(fondosActuales + cantidad));
+            
+            // Añadido. Punto 3, módulo 1
+            Map<String, String> banco = registroBanco.get("BancoBob");
+            double fondosBanco = parseDoubleSeguro(banco.get("FondosEC"));
+
+            banco.put(
+                "FondosEC",
+                String.valueOf(fondosBanco - cantidad)
+            ); //
 
             guardarRegistroBanco();
         }
@@ -297,6 +306,17 @@ public class BancoSirviente implements Runnable {
             // Descarga: eurocoins/ingresos pendientes -> saldo bancario
             clienteActual.put("Saldo", String.valueOf(saldoActual + cantidad));
             clienteActual.put("FondosEC", String.valueOf(fondosActuales - cantidad));
+
+            // Añadido P2
+            Map<String, String> banco = registroBanco.get("BancoBob");
+
+            double fondosBanco = parseDoubleSeguro(banco.get("FondosEC"));
+
+            banco.put(
+                "FondosEC",
+                String.valueOf(fondosBanco + cantidad)
+            );
+            //
 
             guardarRegistroBanco();
         }
