@@ -1,10 +1,10 @@
-
 package eurocoin.common;
-public interface GrantServer extends java.rmi.Remote {
-  public Parametros nuevoBanco(String nombreBanco, Integer activos)
-        throws java.rmi.RemoteException;
-  public Parametros solicitaAumento(String nombreBanco, Integer fondoECPrevisto)
-        throws java.rmi.RemoteException;
-  public Parametros solicitaDecremento(String  nombreBanco, Integer fondoECPrevisto)
-        throws java.rmi.RemoteException;
+
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+public interface GrantServer extends Remote {
+    public Parametros nuevoBanco(String nombreBanco, Integer activos) throws RemoteException;
+    public Parametros solicitaAumento(String nombreBanco, Integer fondoECPrevisto) throws RemoteException;
+    public Parametros solicitaDecremento(String nombreBanco, Integer fondoECPrevisto) throws RemoteException;
 }

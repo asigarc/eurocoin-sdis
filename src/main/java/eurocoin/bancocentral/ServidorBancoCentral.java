@@ -1,39 +1,27 @@
 package eurocoin.bancocentral;
 
-import java.rmi.Naming;
 import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 
 public class ServidorBancoCentral {
 
     public static void main(String[] args) {
-
         try {
+            // Crear el registro RMI interno en el puerto estándar 1099
+            Registry registry = LocateRegistry.createRegistry(1099);
+            System.out.println("[BancoCentral] Registry RMI creado en el puerto 1099.");
 
-            // Crear el registro RMI
-            LocateRegistry.createRegistry(1099);
+            // Crear el objeto remoto sirviente
+            GrantServerObject objetoRemoto = new GrantServerObject();
 
-            System.out.println("[BancoCentral] Registry RMI creado.");
+            // Publicar bajo el identificador público obligatorio especificado
+            registry.rebind("eurocoin.GrantServerObject", objetoRemoto);
 
-            // Crear el objeto remoto
-            GrantServerObject objetoRemoto =new GrantServerObject();
-
-            // Publicar el objeto remoto
-            Naming.rebind("rmi://localhost/GrantServerObject", objetoRemoto);
-
-            System.out.println(
-                    "[BancoCentral] GrantServerObject publicado."
-            );
-
-            System.out.println(
-                    "[BancoCentral] Servidor listo."
-            );
+            System.out.println("[BancoCentral] GrantServerObject publicado exitosamente como 'eurocoin.GrantServerObject'.");
+            System.out.println("[BancoCentral] Servidor Central listo y esperando peticiones...");
 
         } catch (Exception e) {
-
-            System.out.println(
-                    "[BancoCentral] Error: " + e.getMessage()
-            );
-
+            System.err.println("[BancoCentral] Error crítico: " + e.getMessage());
             e.printStackTrace();
         }
     }
