@@ -10,6 +10,7 @@ target/
 
 # Configuración de editores
 .vscode/
+.vscod/
 .idea/
 *.swp
 .DS_Store
