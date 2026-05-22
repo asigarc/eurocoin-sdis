@@ -1,11 +1,11 @@
 package eurocoin.banco;
 
-import eurocoin.common.Contacto;
-
 import java.rmi.RemoteException;
 import java.rmi.server.RMIClientSocketFactory;
 import java.rmi.server.RMIServerSocketFactory;
 import java.rmi.server.UnicastRemoteObject;
+
+import eurocoin.common.Contacto;
 
 public class ContactoImpl extends UnicastRemoteObject implements Contacto {
 

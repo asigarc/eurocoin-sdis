@@ -1,8 +1,8 @@
 package eurocoin.util;
 
 import java.io.FileWriter;
-import java.io.PrintWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 
 // Clase para guardar las operaciones offline en Movimientos.txt
 

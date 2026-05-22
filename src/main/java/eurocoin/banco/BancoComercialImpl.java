@@ -1,8 +1,5 @@
 package eurocoin.banco;
 
-import eurocoin.common.BancoComercial;
-import eurocoin.common.Contacto;
-
 import java.io.FileReader;
 import java.rmi.RemoteException;
 import java.rmi.server.RMIClientSocketFactory;
@@ -12,6 +9,9 @@ import java.util.Map;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+
+import eurocoin.common.BancoComercial;
+import eurocoin.common.Contacto;
 
 public class BancoComercialImpl extends UnicastRemoteObject implements BancoComercial {
 
