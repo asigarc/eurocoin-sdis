@@ -1,6 +1,11 @@
 {
   "BancoBob": {
-    "FondosEC": "50000",
+    "FondosEC": "55000",
+    "LWEurocoins": "10000",
+    "HWEurocoins": "100000"
+  },
+  "BancoAlice": {
+    "FondosEC": "60000",
     "LWEurocoins": "10000",
     "HWEurocoins": "100000"
   }

@@ -1,12 +1,12 @@
 package eurocoin.banco;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.Reader;
 import java.io.Writer;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.HashMap;
@@ -22,6 +22,8 @@ import javax.rmi.ssl.SslRMIServerSocketFactory;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 
 import eurocoin.common.BancoComercial;
@@ -57,8 +59,11 @@ public class Banco {
             return;
         }
 
-        String archivoRegistro = args[1];
-        String archivoMovimientos = args[2];
+        /*
+         * Usamos rutas absolutas para evitar problemas con RMI y rutas relativas.
+         */
+        String archivoRegistro = new File(args[1]).getAbsolutePath();
+        String archivoMovimientos = new File(args[2]).getAbsolutePath();
         String nombreBanco = args[3];
 
         SslRMIClientSocketFactory clientFactory = new SslRMIClientSocketFactory();
@@ -120,34 +125,15 @@ public class Banco {
             Gson gson = new Gson();
             Gson gsonPretty = new GsonBuilder().setPrettyPrinting().create();
 
-            File file = new File(archivoRegistro);
+            File file = new File(archivoRegistro).getAbsoluteFile();
 
-            Map<String, Map<String, String>> registroLocal = new HashMap<>();
-
-            if (file.exists()) {
-                try (Reader reader = new FileReader(file)) {
-                    registroLocal = gson.fromJson(
-                            reader,
-                            new TypeToken<Map<String, Map<String, String>>>() {}.getType()
-                    );
-
-                    if (registroLocal == null) {
-                        registroLocal = new HashMap<>();
-                    }
-                }
-            }
+            Map<String, Map<String, String>> registroLocal = cargarRegistroLocal(file, gson);
 
             asegurarEntradaBanco(registroLocal, nombreBanco);
 
-            /*
-             * MÓDULO 2:
-             * El Banco Comercial crea su propio objeto remoto.
-             * Ya no se registra en el BancoCentral pasando solo sus fondos,
-             * sino pasando una referencia remota BancoComercial.
-             */
             BancoComercial bancoComercialRemoto = new BancoComercialImpl(
                     nombreBanco,
-                    archivoRegistro,
+                    file.getAbsolutePath(),
                     clientFactory,
                     serverFactory
             );
@@ -162,14 +148,6 @@ public class Banco {
 
             System.out.println("[Banco] Conexión RMI SSL establecida con BancoCentral.");
 
-            /*
-             * Esta es la línea corregida:
-             * Antes tenías:
-             *     centralStub.nuevoBanco(nombreBanco, fondosIniciales);
-             *
-             * Ahora, según el Módulo 2:
-             *     nuevoBanco(String nombreBanco, BancoComercial bc)
-             */
             Parametros parametros = centralStub.nuevoBanco(
                     nombreBanco,
                     bancoComercialRemoto
@@ -199,6 +177,60 @@ public class Banco {
             e.printStackTrace();
             return null;
         }
+    }
+
+    private static Map<String, Map<String, String>> cargarRegistroLocal(File file, Gson gson) throws Exception {
+        Map<String, Map<String, String>> registroLocal = new HashMap<>();
+
+        if (!file.exists()) {
+            System.out.println("[Banco] Registro local no existe. Se creará uno nuevo: " + file.getAbsolutePath());
+            return registroLocal;
+        }
+
+        String contenido = new String(
+        Files.readAllBytes(file.toPath()),
+        StandardCharsets.UTF_8
+).trim();
+
+if (!contenido.isEmpty() && contenido.charAt(0) == '\uFEFF') {
+    contenido = contenido.substring(1).trim();
+}
+
+        System.out.println("[Banco] Leyendo registro local desde: " + file.getAbsolutePath());
+        System.out.println("[Banco] Primer carácter del registro: "
+                + (contenido.isEmpty() ? "<vacío>" : contenido.substring(0, 1)));
+
+        if (contenido.isEmpty()) {
+            return registroLocal;
+        }
+
+        JsonElement elemento = JsonParser.parseString(contenido);
+
+        if (elemento.isJsonObject()) {
+            registroLocal = gson.fromJson(
+                    elemento,
+                    new TypeToken<Map<String, Map<String, String>>>() {}.getType()
+            );
+        } else if (elemento.isJsonPrimitive() && elemento.getAsJsonPrimitive().isString()) {
+            /*
+             * Defensa extra:
+             * Si por error el archivo se guardó como:
+             * "{ \"BancoBob\": { ... } }"
+             * lo desempaquetamos y lo volvemos a parsear.
+             */
+            String contenidoInterno = elemento.getAsString().trim();
+
+            System.out.println("[Banco] Aviso: el registro venía envuelto como String. Reintentando parseo interno.");
+
+            registroLocal = gson.fromJson(
+                    contenidoInterno,
+                    new TypeToken<Map<String, Map<String, String>>>() {}.getType()
+            );
+        } else {
+            throw new IllegalStateException("Formato inesperado en " + file.getAbsolutePath());
+        }
+
+        return registroLocal != null ? registroLocal : new HashMap<>();
     }
 
     private static void asegurarEntradaBanco(

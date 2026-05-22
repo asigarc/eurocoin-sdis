@@ -1,17 +1,22 @@
 package eurocoin.banco;
 
-import java.io.FileReader;
+import eurocoin.common.BancoComercial;
+import eurocoin.common.Contacto;
+
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.rmi.RemoteException;
 import java.rmi.server.RMIClientSocketFactory;
 import java.rmi.server.RMIServerSocketFactory;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.HashMap;
 import java.util.Map;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
-
-import eurocoin.common.BancoComercial;
-import eurocoin.common.Contacto;
 
 public class BancoComercialImpl extends UnicastRemoteObject implements BancoComercial {
 
@@ -35,7 +40,7 @@ public class BancoComercialImpl extends UnicastRemoteObject implements BancoCome
         super(0, clientFactory, serverFactory);
 
         this.nombreBanco = nombreBanco;
-        this.archivoRegistro = archivoRegistro;
+        this.archivoRegistro = new File(archivoRegistro).getAbsolutePath();
         this.clientFactory = clientFactory;
         this.serverFactory = serverFactory;
     }
@@ -82,18 +87,60 @@ public class BancoComercialImpl extends UnicastRemoteObject implements BancoCome
     }
 
     private Map<String, Map<String, String>> cargarRegistroBanco() throws Exception {
-        try (FileReader reader = new FileReader(archivoRegistro)) {
-            Map<String, Map<String, String>> registro = gson.fromJson(
-                    reader,
+        File file = new File(archivoRegistro).getAbsoluteFile();
+
+        if (!file.exists()) {
+            throw new IllegalStateException("No existe el registro: " + file.getAbsolutePath());
+        }
+
+        String contenido = new String(
+                Files.readAllBytes(file.toPath()),
+                StandardCharsets.UTF_8
+        ).trim();
+
+        /*
+         * PowerShell puede guardar UTF-8 con BOM. Si aparece, Gson puede verlo
+         * como un carácter extraño al principio. Lo quitamos antes de parsear.
+         */
+        if (!contenido.isEmpty() && contenido.charAt(0) == '\uFEFF') {
+            contenido = contenido.substring(1).trim();
+        }
+
+        if (contenido.isEmpty()) {
+            return new HashMap<>();
+        }
+
+        JsonElement elemento = JsonParser.parseString(contenido);
+
+        Map<String, Map<String, String>> registro;
+
+        if (elemento.isJsonObject()) {
+            registro = gson.fromJson(
+                    elemento,
                     new TypeToken<Map<String, Map<String, String>>>() {}.getType()
             );
+        } else if (elemento.isJsonPrimitive() && elemento.getAsJsonPrimitive().isString()) {
+            /*
+             * Defensa extra:
+             * Si el archivo estuviera guardado como:
+             * "{ \"BancoBob\": { ... } }"
+             * lo desempaquetamos y parseamos el contenido interno.
+             */
+            String contenidoInterno = elemento.getAsString().trim();
 
-            if (registro == null) {
-                throw new IllegalStateException("RegistroBanco.json vacío o mal formado.");
+            if (!contenidoInterno.isEmpty() && contenidoInterno.charAt(0) == '\uFEFF') {
+                contenidoInterno = contenidoInterno.substring(1).trim();
             }
 
-            return registro;
+            registro = gson.fromJson(
+                    contenidoInterno,
+                    new TypeToken<Map<String, Map<String, String>>>() {}.getType()
+            );
+        } else {
+            throw new IllegalStateException("Formato inesperado en " + file.getAbsolutePath());
         }
+
+        return registro != null ? registro : new HashMap<>();
     }
 
     private int obtenerEntero(String valor, int defecto) {
