@@ -3,7 +3,7 @@
     "MasterKey": "9942koofffo",
     "SecWallet": "Secreto-BancoBob-APP",
     "SecBanco": "Secreto-BancoBob",
-    "FondosEC": "55100",
+    "FondosEC": "50000",
     "LWEurocoins": "10000",
     "HWEurocoins": "100000"
   },
@@ -11,7 +11,7 @@
     "MasterKey": "9942koofffo",
     "SecWallet": "Secreto-PedroLuis",
     "SecBanco": "Secreto-BancoBob",
-    "Saldo": "1700",
-    "FondosEC": "300"
+    "Saldo": "1500",
+    "FondosEC": "500"
   }
 }
