@@ -1,0 +1,17 @@
+{
+    "BancoAlice": {
+        "MasterKey": "9942koofffo",
+        "SecWallet": "Secreto-BancoAlice-APP",
+        "SecBanco": "Secreto-BancoAlice",
+        "FondosEC": "60000",
+        "LWEurocoins": "10000",
+        "HWEurocoins": "100000"
+    },
+    "AngelAntonio": {
+        "MasterKey": "9942koofffo",
+        "SecWallet": "Secreto-AngelAntonio",
+        "SecBanco": "Secreto-BancoAlice",
+        "Saldo": "1500",
+        "FondosEC": "500"
+    }
+}
